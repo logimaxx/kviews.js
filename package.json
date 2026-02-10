@@ -1,6 +1,6 @@
 {
   "name": "kviews",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Class-based API data binding library",
   "type": "module",
   "main": "src/index.js",
