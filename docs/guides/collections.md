@@ -314,7 +314,7 @@ collection.on('update', (collection) => {
 ```html
 <div id="posts">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
+        <h2>{{title}}</h2>
     </div>
 </div>
 ```
@@ -330,7 +330,7 @@ When empty, the template is hidden.
 
 <div id="posts">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
+        <h2>{{title}}</h2>
     </div>
 </div>
 

@@ -248,9 +248,9 @@ item.on('remove', (item) => {
 ```html
 <div id="posts">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        <p>{{attributes.content}}</p>
-        <p>Author: {{relationships.author.attributes.name}}</p>
+        <h2>{{title}}</h2>
+        <p>{{content}}</p>
+        <p>Author: {{author.attributes.name}}</p>
     </div>
 </div>
 ```
@@ -260,8 +260,8 @@ item.on('remove', (item) => {
 ```html
 <template id="post-template">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        <p>{{attributes.content}}</p>
+        <h2>{{title}}</h2>
+        <p>{{content}}</p>
     </div>
 </template>
 
@@ -283,7 +283,7 @@ item.on('remove', (item) => {
 ```javascript
 import Handlebars from 'handlebars';
 
-const template = Handlebars.compile('<div>{{attributes.title}}</div>');
+const template = Handlebars.compile('<div>{{title}}</div>');
 
 KViews.createCollectionInstance('#posts', {
     url: '/api/posts',
@@ -304,7 +304,7 @@ KViews.createCollectionInstance('#posts', {
 
 <div id="posts">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
+        <h2>{{title}}</h2>
     </div>
 </div>
 
@@ -466,10 +466,10 @@ collection.loadFromRemote();
 
 ```html
 <div id="post">
-    {{#if attributes.published}}
-        <h2>{{attributes.title}}</h2>
+    {{#if published}}
+        <h2>{{title}}</h2>
     {{else}}
-        <p>Draft: {{attributes.title}}</p>
+        <p>Draft: {{title}}</p>
     {{/if}}
 </div>
 ```
@@ -478,11 +478,11 @@ collection.loadFromRemote();
 
 ```html
 <div id="post">
-    <h2>{{attributes.title}}</h2>
+    <h2>{{title}}</h2>
     <h3>Tags:</h3>
     <ul>
         {{#each relationships.tags}}
-            <li>{{attributes.name}}</li>
+            <li>{{name}}</li>
         {{/each}}
     </ul>
 </div>

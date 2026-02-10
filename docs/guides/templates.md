@@ -6,6 +6,8 @@ Learn how to use Handlebars templates with KViews.
 
 KViews uses Handlebars for template rendering. Templates are compiled from HTML strings and rendered with item or collection data.
 
+**Important:** In templates, `attributes` and `relationships` are exposed directly. You don't need to use `{{attributes.property}}` - just use `{{property}}`.
+
 ## Inline Templates
 
 The simplest way to define a template is inline in your HTML:
@@ -13,8 +15,8 @@ The simplest way to define a template is inline in your HTML:
 ```html
 <div id="posts">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        <p>{{attributes.content}}</p>
+        <h2>{{title}}</h2>
+        <p>{{content}}</p>
         <small>ID: {{id}}</small>
     </div>
 </div>
@@ -26,11 +28,15 @@ KViews automatically extracts the inner HTML as the template.
 
 ### Accessing Attributes
 
+Attributes are exposed directly in templates (no `attributes.` prefix needed):
+
 ```handlebars
-{{attributes.title}}
-{{attributes.content}}
-{{attributes.created_at}}
+{{title}}
+{{content}}
+{{created_at}}
 ```
+
+**Note:** KViews automatically flattens `attributes` into the template context, so `{{title}}` works instead of `{{attributes.title}}`.
 
 ### Accessing Item Properties
 
@@ -39,10 +45,19 @@ KViews automatically extracts the inner HTML as the template.
 {{type}}
 ```
 
+### Accessing Relationships
+
+Relationships are exposed directly, but you still access nested properties:
+
+```handlebars
+{{author.attributes.name}}  <!-- For 1:1 relationships -->
+{{author.id}}               <!-- Access relationship ID -->
+```
+
 ### Conditional Rendering
 
 ```handlebars
-{{#if attributes.published}}
+{{#if published}}
     <span class="published">Published</span>
 {{else}}
     <span class="draft">Draft</span>
@@ -53,7 +68,7 @@ KViews automatically extracts the inner HTML as the template.
 
 ```handlebars
 <ul>
-    {{#each relationships.tags}}
+    {{#each tags}}
         <li>{{attributes.name}}</li>
     {{/each}}
 </ul>
@@ -63,22 +78,24 @@ KViews automatically extracts the inner HTML as the template.
 
 ```handlebars
 <div class="post">
-    <h2>{{attributes.title}}</h2>
-    <p>By {{relationships.author.attributes.name}}</p>
+    <h2>{{title}}</h2>
+    <p>By {{author.attributes.name}}</p>
     <p>Tags:
-        {{#each relationships.tags}}
+        {{#each tags}}
             <span>{{attributes.name}}</span>
         {{/each}}
     </p>
 </div>
 ```
 
+**Note:** Relationships are exposed directly, so use `{{author}}` instead of `{{relationships.author}}`. However, nested relationship attributes still use `{{author.attributes.name}}`.
+
 ### Helpers
 
 Handlebars helpers work as expected:
 
 ```handlebars
-{{#each relationships.comments}}
+{{#each comments}}
     <div class="comment">
         <p>{{attributes.text}}</p>
         <small>{{formatDate attributes.created_at}}</small>
@@ -93,8 +110,8 @@ Handlebars helpers work as expected:
 ```html
 <template id="post-template">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        <p>{{attributes.content}}</p>
+        <h2>{{title}}</h2>
+        <p>{{content}}</p>
     </div>
 </template>
 
@@ -116,7 +133,7 @@ Handlebars helpers work as expected:
 ```html
 <div id="post-template" style="display:none;">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
+        <h2>{{title}}</h2>
     </div>
 </div>
 
@@ -142,8 +159,8 @@ import Handlebars from 'handlebars';
 
 const templateSource = `
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        <p>{{attributes.content}}</p>
+        <h2>{{title}}</h2>
+        <p>{{content}}</p>
     </div>
 `;
 
@@ -169,8 +186,8 @@ Handlebars.registerHelper('formatDate', (date) => {
 // Use in template
 const template = Handlebars.compile(`
     <div>
-        <h2>{{attributes.title}}</h2>
-        <small>{{formatDate attributes.created_at}}</small>
+        <h2>{{title}}</h2>
+        <small>{{formatDate created_at}}</small>
     </div>
 `);
 ```
@@ -183,8 +200,8 @@ const template = Handlebars.compile(`
 <div id="posts">
     <!-- This is the item template -->
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        <p>{{attributes.content}}</p>
+        <h2>{{title}}</h2>
+        <p>{{content}}</p>
     </div>
 </div>
 ```
@@ -196,7 +213,7 @@ Each item in the collection is rendered using this template.
 ```html
 <div id="posts">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
+        <h2>{{title}}</h2>
     </div>
 </div>
 
@@ -221,13 +238,13 @@ Each item in the collection is rendered using this template.
 
 ```html
 <div id="post-detail">
-    <h1>{{attributes.title}}</h1>
+    <h1>{{title}}</h1>
     <div class="content">
-        {{attributes.content}}
+        {{content}}
     </div>
     <div class="meta">
-        <p>Author: {{relationships.author.attributes.name}}</p>
-        <p>Created: {{attributes.created_at}}</p>
+        <p>Author: {{author.attributes.name}}</p>
+        <p>Created: {{created_at}}</p>
     </div>
 </div>
 ```
@@ -238,14 +255,14 @@ Each item in the collection is rendered using this template.
 
 ```handlebars
 <div class="post">
-    <h2>{{attributes.title}}</h2>
+    <h2>{{title}}</h2>
     
     <h3>Comments:</h3>
     <div class="comments">
-        {{#each relationships.comments}}
+        {{#each comments}}
             <div class="comment">
                 <p>{{attributes.text}}</p>
-                <small>By {{relationships.author.attributes.name}}</small>
+                <small>By {{author.attributes.name}}</small>
             </div>
         {{/each}}
     </div>
@@ -255,16 +272,16 @@ Each item in the collection is rendered using this template.
 ### Conditional Classes
 
 ```handlebars
-<div class="post {{#if attributes.published}}published{{else}}draft{{/if}}">
-    <h2>{{attributes.title}}</h2>
+<div class="post {{#if published}}published{{else}}draft{{/if}}">
+    <h2>{{title}}</h2>
 </div>
 ```
 
 ### Safe HTML
 
 ```handlebars
-{{{attributes.content}}} <!-- Unescaped HTML -->
-{{attributes.content}}    <!-- Escaped HTML -->
+{{{content}}} <!-- Unescaped HTML -->
+{{content}}    <!-- Escaped HTML -->
 ```
 
 ### Custom Helpers
@@ -277,7 +294,7 @@ Handlebars.registerHelper('gt', (a, b) => a > b);
 Handlebars.registerHelper('lt', (a, b) => a < b);
 
 // Use in template
-{{#if (gt attributes.views 100)}}
+{{#if (gt views 100)}}
     <span class="popular">Popular</span>
 {{/if}}
 ```
@@ -289,16 +306,16 @@ import Handlebars from 'handlebars';
 
 Handlebars.registerPartial('user', `
     <div class="user">
-        <h3>{{attributes.name}}</h3>
-        <p>{{attributes.email}}</p>
+        <h3>{{name}}</h3>
+        <p>{{email}}</p>
     </div>
 `);
 
 // Use partial
 const template = Handlebars.compile(`
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        {{> user relationships.author}}
+        <h2>{{title}}</h2>
+        {{> user author}}
     </div>
 `);
 ```
@@ -310,8 +327,8 @@ const template = Handlebars.compile(`
 ```handlebars
 <!-- Good -->
 <div class="post">
-    <h2>{{attributes.title}}</h2>
-    <p>{{attributes.content}}</p>
+    <h2>{{title}}</h2>
+    <p>{{content}}</p>
 </div>
 
 <!-- Avoid complex logic in templates -->
@@ -326,14 +343,14 @@ Handlebars.registerHelper('truncate', (str, len) => {
 });
 
 // Use in template
-<p>{{truncate attributes.content 100}}</p>
+<p>{{truncate content 100}}</p>
 ```
 
 ### 3. Handle Missing Data
 
 ```handlebars
-{{#if attributes.description}}
-    <p>{{attributes.description}}</p>
+{{#if description}}
+    <p>{{description}}</p>
 {{else}}
     <p>No description available</p>
 {{/if}}
@@ -343,10 +360,10 @@ Handlebars.registerHelper('truncate', (str, len) => {
 
 ```handlebars
 <!-- Automatically escaped -->
-{{attributes.user_input}}
+{{user_input}}
 
 <!-- Only use unescaped if you trust the source -->
-{{{attributes.trusted_html}}}
+{{{trusted_html}}}
 ```
 
 ## Debugging Templates

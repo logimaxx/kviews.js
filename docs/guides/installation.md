@@ -22,7 +22,7 @@ Download `dist/kviews.js` and include it in your HTML:
 <body>
     <div id="collection">
         <div class="item">
-            <h2>{{attributes.title}}</h2>
+            <h2>{{title}}</h2>
         </div>
     </div>
 

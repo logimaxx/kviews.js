@@ -45,8 +45,8 @@ npx esbuild src/index.js --bundle --format=iife --global-name=KViews --outfile=d
 <body>
     <div id="collection">
         <div class="item">
-            <h2>{{attributes.title}}</h2>
-            <p>{{attributes.content}}</p>
+            <h2>{{title}}</h2>
+            <p>{{content}}</p>
         </div>
     </div>
 
@@ -135,8 +135,8 @@ If jQuery is loaded, the bundle automatically registers jQuery plugins:
     
     <div id="posts">
         <div class="post">
-            <h2>{{attributes.title}}</h2>
-            <p>{{attributes.content}}</p>
+            <h2>{{title}}</h2>
+            <p>{{content}}</p>
             <button onclick="this.closest('.post').querySelector('[data-instance]').delete()">Delete</button>
         </div>
     </div>

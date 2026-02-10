@@ -50,8 +50,8 @@ Create your HTML with a container element and a template:
 ```html
 <div id="posts-collection">
     <div class="post">
-        <h2>{{attributes.title}}</h2>
-        <p>{{attributes.content}}</p>
+        <h2>{{title}}</h2>
+        <p>{{content}}</p>
     </div>
 </div>
 ```
@@ -134,8 +134,8 @@ Then open: `http://localhost:8000`
     <h1>Posts</h1>
     <div id="posts">
         <div class="post">
-            <h2>{{attributes.title}}</h2>
-            <p>{{attributes.content}}</p>
+            <h2>{{title}}</h2>
+            <p>{{content}}</p>
             <small>ID: {{id}}</small>
         </div>
     </div>
@@ -172,8 +172,8 @@ Then open: `http://localhost:8000`
     <h1>Posts</h1>
     <div id="posts">
         <div class="post">
-            <h2>{{attributes.title}}</h2>
-            <p>{{attributes.content}}</p>
+            <h2>{{title}}</h2>
+            <p>{{content}}</p>
             <small>ID: {{id}}</small>
         </div>
     </div>
@@ -197,9 +197,9 @@ Then open: `http://localhost:8000`
 
 ```html
 <div id="post-detail">
-    <h1>{{attributes.title}}</h1>
-    <p>{{attributes.content}}</p>
-    <p>Author: {{relationships.author.attributes.name}}</p>
+    <h1>{{title}}</h1>
+    <p>{{content}}</p>
+    <p>Author: {{author.attributes.name}}</p>
 </div>
 
 <script src="./dist/kviews.js"></script>
@@ -215,9 +215,9 @@ Then open: `http://localhost:8000`
 
 ```html
 <div id="post-detail">
-    <h1>{{attributes.title}}</h1>
-    <p>{{attributes.content}}</p>
-    <p>Author: {{relationships.author.attributes.name}}</p>
+    <h1>{{title}}</h1>
+    <p>{{content}}</p>
+    <p>Author: {{author.attributes.name}}</p>
 </div>
 
 <script type="module">

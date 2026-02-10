@@ -24,7 +24,11 @@
     "collection",
     "item"
   ],
-  "author": "",
+  "author": {
+    "name": "Sergiu Voicu",
+    "url": "https://logimaxx.ro"
+  },
+  "publisher": "Logimaxx System SRL",
   "license": "MIT",
   "devDependencies": {
     "@playwright/test": "^1.40.0",
