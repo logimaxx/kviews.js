@@ -1,0 +1,40 @@
+{
+  "name": "kviews",
+  "version": "1.0.0",
+  "description": "Class-based API data binding library",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "node build.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:all": "npm run test && npm run test:e2e",
+    "serve:python": "python3 -m http.server 8000",
+    "serve:php": "php -S localhost:8000",
+    "serve:node": "npx http-server -p 8000"
+  },
+  "keywords": [
+    "api",
+    "data-binding",
+    "json-api",
+    "collection",
+    "item"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@vitest/ui": "^1.0.0",
+    "esbuild": "^0.27.3",
+    "jsdom": "^23.0.0",
+    "rollup": "^4.57.1",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "handlebars": "^4.0.0"
+  }
+}

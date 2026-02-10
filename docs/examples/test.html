@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KViews Demo</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" >
+    
+</head>
+<body>
+    <div class="container">
+        <h1>KViews Demo</h1>
+        <form id="form">
+            <input type="text" name="label" placeholder="Label">
+            <input type="text" name="cui" placeholder="CUI">
+            <button type="submit">Add</button>
+            <input type="hidden" name="id" value="">
+            <input type="reset" value="Reset">
+        </form>
+    
+        <!-- Collection Example -->
+        <div id="collection" class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h2>{{label}}</h2>
+                        <p>{{cui}}</p>
+                        <button class="btn btn-danger" onclick="$(this).parents('[data-type=item]').data('instance').delete()">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="item">
+            <h2>{{label}}</h2>
+            <p>{{cui}}</p>
+        </div>
+
+        <div id="new-item">
+            <h2>{{label}}</h2>
+            <p>{{cui}}</p>
+        </div>
+    </div>
+    <!-- Load Handlebars for template compilation -->
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Option 1: Using ES6 Modules (Modern Browsers) -->
+    <script type="module">
+        import { KViews } from '../../src/index.js';
+        const baseUrl = 'https://dbapi01.softaccel.net/apis/maxxopsdevel/data/';
+        window.kviewsLogLevel = 3;
+        $(document).ready(() => {
+            const collectionInstance = KViews.createCollectionInstance($('#collection'), {
+                url: baseUrl + '/companies',
+                type: 'companies',
+                pageSize: 5,
+            });
+
+            const itemInstance = KViews.createItemInstance($('#item'),baseUrl + '/companies/1');
+            
+            const newItemInstance = KViews.createItemInstance($('#new-item'))
+                .loadFromData({ label: 'New Company', cui: '1234567890' }, true);
+            
+
+
+            document.getElementById('form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                const data = new FormData(event.target);
+                const id = data.get('id');
+                const label = data.get('label');
+                const cui = data.get('cui');
+                collectionInstance.newItem({ label: label, cui: cui});
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+    "data": [
+        {
+            "type": "posts",
+            "id": "1",
+            "attributes": {
+                "title": "Post 1",
+                "content": "Content of post 1"
+            }
+        },
+        {
+            "type": "posts",
+            "id": "2",
+            "attributes": {
+                "title": "Post 2",
+                "content": "Content of post 2"
+            }
+        }
+    ],
+    "meta": {
+        "total": 2
+    }
+}

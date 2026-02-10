@@ -1,0 +1,495 @@
+# Items Guide
+
+Learn how to work with individual items in KViews.
+
+## What is an Item?
+
+An Item represents a single resource fetched from an API endpoint. It manages the item's data, relationships, and views.
+
+## Creating Items
+
+### Basic Item
+
+**Using Bundle:**
+```html
+<script src="./dist/kviews.js"></script>
+<script>
+    const item = KViews.createItemInstance('#post-detail', {
+        url: '/api/posts/1',
+        type: 'posts'
+    });
+</script>
+```
+
+**Using ES6 Modules:**
+```javascript
+import { KViews } from './src/index.js';
+
+const item = KViews.createItemInstance('#post-detail', {
+    url: '/api/posts/1',
+    type: 'posts'
+});
+```
+
+### Item Options
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', {
+    url: '/api/posts/1',      // API endpoint
+    type: 'posts',             // Resource type
+    template: myTemplate,      // Custom template
+    emptyview: '#empty',      // Empty state element
+    strict: false,             // Strict mode
+    dontload: false,          // Auto-load on creation
+    on: {                      // Event listeners
+        load: (item) => console.log('Loaded'),
+        update: (item) => console.log('Updated')
+    }
+});
+```
+
+### Item from String URL
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', '/api/posts/1');
+```
+
+### Item with Initial Data
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', {
+    url: '/api/posts/1',
+    type: 'posts'
+}, {
+    id: '1',
+    type: 'posts',
+    attributes: {
+        title: 'My Post',
+        content: 'Post content'
+    }
+});
+```
+
+## Loading Data
+
+### Auto-load on Creation
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', {
+    url: '/api/posts/1',
+    type: 'posts'
+});
+// Data loads automatically
+```
+
+### Manual Loading
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', {
+    url: '/api/posts/1',
+    type: 'posts',
+    dontload: true
+});
+
+item.loadFromRemote().then((item) => {
+    console.log('Item loaded:', item.attributes.title);
+});
+```
+
+### Loading from Static Data
+
+```javascript
+item.loadFromData({
+    id: '1',
+    type: 'posts',
+    attributes: {
+        title: 'My Post',
+        content: 'Post content'
+    }
+});
+```
+
+### Loading from JSON API Document
+
+```javascript
+item.loadFromJSONAPIDoc({
+    data: {
+        id: '1',
+        type: 'posts',
+        attributes: {
+            title: 'My Post'
+        },
+        relationships: {
+            author: {
+                data: { id: '123', type: 'users' }
+            }
+        }
+    },
+    included: [
+        {
+            id: '123',
+            type: 'users',
+            attributes: {
+                name: 'John Doe'
+            }
+        }
+    ]
+});
+```
+
+## Accessing Data
+
+### Attributes
+
+```javascript
+const title = item.attributes.title;
+const content = item.attributes.content;
+
+// Update attribute
+item.attributes.title = 'New Title';
+```
+
+### Relationships
+
+```javascript
+// 1:1 relationship
+const author = item.relationships.author;
+console.log(author.attributes.name);
+
+// 1:N relationship
+const tags = item.relationships.tags;
+tags.forEach(tag => {
+    console.log(tag.attributes.name);
+});
+```
+
+### Item Properties
+
+```javascript
+const id = item.id;
+const type = item.type;
+const url = item.url.toString();
+```
+
+## Updating Items
+
+### Basic Update
+
+```javascript
+item.update({
+    title: 'Updated Title',
+    content: 'Updated content'
+}).then((item) => {
+    console.log('Item updated');
+});
+```
+
+### Update Options
+
+```javascript
+item.update({
+    attributes: {
+        title: 'New Title'
+    }
+}, {
+    sync: true,      // Sync immediately (default: true)
+    rerender: true   // Re-render views (default: true)
+});
+```
+
+### Updating Relationships
+
+```javascript
+// Update 1:1 relationship
+item.update({
+    relationships: {
+        author: {
+            data: { id: '456', type: 'users' }
+        }
+    }
+});
+
+// Clear relationship
+item.update({
+    relationships: {
+        author: null
+    }
+});
+```
+
+### Deferred Update
+
+```javascript
+// Make changes without syncing
+item.update({
+    attributes: { title: 'New Title' }
+}, { sync: false });
+
+// Sync later
+item.sync().then(() => {
+    console.log('Synced');
+});
+```
+
+## Deleting Items
+
+### Delete from Server
+
+```javascript
+item.delete().then(() => {
+    console.log('Item deleted from server');
+    // Item is automatically removed from views and collection
+});
+```
+
+### Delete Options
+
+```javascript
+item.delete({
+    sync: true // Sync immediately (default: true)
+});
+```
+
+### Remove from Views Only
+
+```javascript
+item.remove().then(() => {
+    console.log('Item removed from views');
+    // Item still exists on server
+});
+```
+
+## Setting URLs
+
+### Set Main URL
+
+```javascript
+item.setUrl('/api/posts/1');
+```
+
+### Set Update URL
+
+```javascript
+item.setUrl('/api/posts/1', 'update');
+// or
+item.updateUrl = createURL('/api/posts/1');
+```
+
+### Set Delete URL
+
+```javascript
+item.setUrl('/api/posts/1', 'delete');
+// or
+item.deleteUrl = createURL('/api/posts/1');
+```
+
+## Multiple Views
+
+### Binding Multiple Views
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', '/api/posts/1');
+
+// Bind additional view
+item.bindView(new ItemView({
+    template: summaryTemplate,
+    el: '#post-summary'
+}));
+
+// All views update when item changes
+item.update({ attributes: { title: 'New' } });
+// Both #post-detail and #post-summary update
+```
+
+### Unbinding Views
+
+```javascript
+item.unbindView(view);
+```
+
+## Events
+
+### Load Event
+
+```javascript
+item.on('load', (item) => {
+    console.log('Item loaded:', item.id);
+    console.log('Title:', item.attributes.title);
+});
+```
+
+### Update Event
+
+```javascript
+item.on('update', (item) => {
+    console.log('Item updated:', item.id);
+});
+```
+
+### Remove Event
+
+```javascript
+item.on('remove', (item) => {
+    console.log('Item removed:', item.id);
+});
+```
+
+## Rendering
+
+### Manual Render
+
+```javascript
+item.render();
+```
+
+### Render to Specific View
+
+```javascript
+const collectionView = collection.view;
+item.render(collectionView);
+```
+
+### Render with Options
+
+```javascript
+item.render(collectionView, true); // addontop = true
+```
+
+## Relationships
+
+### Accessing Relationships
+
+```javascript
+// 1:1 relationship
+const author = item.relationships.author;
+if (author) {
+    console.log(author.attributes.name);
+}
+
+// 1:N relationship
+const comments = item.relationships.comments;
+if (comments && comments.length) {
+    comments.forEach(comment => {
+        console.log(comment.attributes.text);
+    });
+}
+```
+
+### Updating Relationships
+
+```javascript
+// Set relationship
+item.update({
+    relationships: {
+        author: {
+            data: { id: '123', type: 'users' }
+        }
+    }
+});
+
+// Clear relationship
+item.update({
+    relationships: {
+        author: null
+    }
+});
+```
+
+## JSON API Format
+
+### Converting to JSON
+
+```javascript
+const json = item.toJSON();
+// {
+//     type: 'posts',
+//     id: '1',
+//     attributes: { ... },
+//     relationships: { ... }
+// }
+```
+
+### Loading from JSON API
+
+```javascript
+item.loadFromJSONAPIDoc({
+    data: {
+        id: '1',
+        type: 'posts',
+        attributes: {
+            title: 'My Post'
+        },
+        relationships: {
+            author: {
+                data: { id: '123', type: 'users' }
+            }
+        }
+    },
+    included: [
+        {
+            id: '123',
+            type: 'users',
+            attributes: {
+                name: 'John Doe'
+            }
+        }
+    ]
+});
+```
+
+## Common Patterns
+
+### Form Integration
+
+**Using KViews.helpers (Recommended):**
+```javascript
+// Bundle or ES6 Modules
+const item = KViews.createItemInstance('#post', '/api/posts/1');
+
+// Fill form with item data
+item.on('load', (item) => {
+    KViews.helpers.fillForm('#edit-form', item);
+});
+
+// Update on form submit
+KViews.helpers.captureFormSubmit('#edit-form', (formData) => {
+    item.update({
+        attributes: formData
+    });
+});
+```
+
+**Alternative: Direct Import:**
+```javascript
+import { utilities } from './src/index.js';
+
+// Fill form with item data
+item.on('load', (item) => {
+    utilities.fillForm('#edit-form', item);
+});
+
+// Update on form submit
+utilities.captureFormSubmit('#edit-form', (formData) => {
+    item.update({
+        attributes: formData
+    });
+});
+```
+
+### Conditional Actions
+
+```javascript
+if (item.attributes.published) {
+    // Show edit button
+} else {
+    // Show publish button
+}
+```
+
+### Refresh Item
+
+```javascript
+item.refresh().then((item) => {
+    console.log('Item refreshed');
+});
+```
