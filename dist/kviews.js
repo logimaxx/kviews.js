@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-02-12T05:25:45.164Z
+ * Built: 2026-02-12T11:18:13.472Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
