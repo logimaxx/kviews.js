@@ -22,7 +22,7 @@ export class Item {
         this.shadow = null;
         this.syncOp = null;
         this.emptyview = null;
-        this.actions = [];
+        this.uievents = [];
         this.callbacks = {};
         try {
             Object.assign(this, parseOptions(options));

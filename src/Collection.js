@@ -5,22 +5,21 @@ import { flattenDoc, buildDb, parseDataForInsertOrUpdate } from './dataParser.js
 import { Item } from './Item.js';
 import { ItemView } from './ItemView.js';
 import { CollectionView } from './CollectionView.js';
+import { Paging } from './Paging.js';
 
 /**
  * Collection class - represents a collection of items
  */
 export class Collection {
     constructor(opts = {}) {
-        dbg("Collection options", opts);
         let allowedOptions = ["url", "deleteUrl", "insertUrl", "updateUrl",
             "view", "offset", "pageSize", "template", "type", "emptyview", "filter", "pagesize",
-            "resourcetype", "dataBindings", "addontop", "template", "actions"];
+            "resourcetype", "dataBindings", "addontop", "template", "uievents", "paging", "pagesizeinp"];
 
         this.url = null;
         this.deleteUrl = null;
         this.insertUrl = null;
         this.updateUrl = null;
-        // Paging removed - kept for backward compatibility but not used
         this.paging = null;
         this.view = null;
         this.offset = 0;
@@ -33,7 +32,7 @@ export class Collection {
         this.length = 0;
         this.items = [];
         this.addontop = false;
-        this.actions = [];
+        this.uievents = [];
         this.onafterrender = null;
         this.onbeforeload = null;
 
@@ -55,7 +54,13 @@ export class Collection {
 
         Object.assign(this, options);
 
-        this.setUrl(this.url);
+        if (options.hasOwnProperty("paging") && $(options.paging).length) {
+            this.paging = new Paging($(options.paging)[0], this);
+        }
+
+        if(this.url) {
+            this.setUrl(this.url);
+        }
 
         if (this.view) {
             this.view.collection = this;
@@ -153,6 +158,8 @@ export class Collection {
         throw new Error("Not implemented... yet");
     }
     setUrl(url,type) {
+        if(!url)
+            return this;
         switch(type) {
             case "delete":
                 this.deleteUrl = createURL(url);
@@ -385,6 +392,9 @@ export class Collection {
                             loader.parentNode.removeChild(loader);
                         }
                     }
+                    if(this.paging) {
+                        this.paging.render();
+                    }
                     resolve(this);
                 })
                 .catch((error) => {
@@ -469,7 +479,7 @@ export class Collection {
         let opts = {
             type: this.type,
             collection: this,
-            actions: this.actions,
+            uievents: this.uievents,
             storage: this.storage
         };
 

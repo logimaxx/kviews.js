@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-02-10T09:44:58.583Z
+ * Built: 2026-02-12T05:25:45.164Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -31,12 +31,14 @@ var KViews = (() => {
     Item: () => Item,
     ItemView: () => ItemView,
     KViews: () => KViews2,
+    Paging: () => Paging,
     Storage: () => Storage,
     URL: () => URL,
     createOverlay: () => createOverlay,
     createURL: () => createURL,
     dbg: () => dbg,
     deepmerge: () => deepmerge,
+    default: () => index_default,
     error: () => error,
     getBoundObjects: () => getBoundObjects,
     log: () => log,
@@ -49,7 +51,7 @@ var KViews = (() => {
   // src/utils.js
   function dbg() {
     if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel == 3) {
-      console.debug(...arguments);
+      console.trace(...arguments);
     }
   }
   function log() {
@@ -762,18 +764,17 @@ var KViews = (() => {
         return null;
       }
       dbg("View item", this.item);
-      if (this.item && this.item.actions) {
-        this.item.actions.forEach((action) => {
-          if (action.selector && action.event && action.action) {
-            let actionEl;
-            if (typeof $ !== "undefined") {
-              actionEl = $(renderedEl).find(action.selector);
-              actionEl.on(action.event, () => action.action(this.item, this));
-            } else {
-              actionEl = renderedEl.querySelector(action.selector);
-              if (actionEl) {
-                actionEl.addEventListener(action.event, () => action.action(this.item, this));
-              }
+      if (this.item && this.item.uievents) {
+        this.item.uievents.forEach((action) => {
+          if (action.selector && action.event && action.callback) {
+            console.log("setup event", action);
+            const actionEl = typeof $ !== "undefined" ? $(renderedEl).find(action.selector)[0] || null : renderedEl.querySelector(action.selector);
+            if (actionEl) {
+              actionEl.addEventListener(action.event, (event) => {
+                event.preventDefault();
+                console.log("event triggered", event, this.item, this);
+                action.callback(event, this.item, this);
+              });
             }
           }
         });
@@ -880,7 +881,7 @@ var KViews = (() => {
       this.shadow = null;
       this.syncOp = null;
       this.emptyview = null;
-      this.actions = [];
+      this.uievents = [];
       this.callbacks = {};
       try {
         Object.assign(this, parseOptions(options));
@@ -1419,10 +1420,330 @@ var KViews = (() => {
     }
   };
 
+  // src/Paging.js
+  var Paging = class {
+    constructor(pagingEl, collection) {
+      this.collection = collection;
+      if (typeof $ !== "undefined") {
+        this.el = $(pagingEl);
+      } else {
+        this.el = pagingEl.nodeName ? pagingEl : pagingEl[0];
+      }
+      this.collection.paging = this;
+      this.iniOffset = (this.collection.offset ? this.collection.offset : 0) * 1;
+      this.defaultPageSize = 20;
+      this.pageSize = this.collection.pageSize;
+      this.setupPageSizeInput();
+      this.setupOffsetInput();
+      this.buttons = this.extractButtons();
+      console.log("buttons", this.buttons);
+      this.setupTotalCount();
+      this.render();
+    }
+    /**
+     * Setup page size input handler
+     */
+    setupPageSizeInput() {
+      let pageSizeInp;
+      if (typeof $ !== "undefined") {
+        pageSizeInp = $(this.collection.pagesizeinp);
+        if (pageSizeInp.length) {
+          this.collection.setPageSize(pageSizeInp.val());
+          pageSizeInp.off("change").on("change", () => {
+            if (this.collection.setPageSize(pageSizeInp.val())) {
+              this.collection.loadFromRemote();
+            }
+          });
+        }
+      } else {
+        pageSizeInp = typeof this.collection.pagesizeinp === "string" ? document.querySelector(this.collection.pagesizeinp) : this.collection.pagesizeinp;
+        if (pageSizeInp) {
+          this.collection.setPageSize(pageSizeInp.value);
+          pageSizeInp.addEventListener("change", () => {
+            if (this.collection.setPageSize(pageSizeInp.value)) {
+              this.collection.loadFromRemote();
+            }
+          });
+        }
+      }
+    }
+    /**
+     * Setup offset input handler
+     */
+    setupOffsetInput() {
+      let offsetInp;
+      if (typeof $ !== "undefined") {
+        offsetInp = $(this.collection.offsetinp);
+        if (offsetInp.length) {
+          this.collection.setOffset(offsetInp.val());
+          offsetInp.off("change").on("change", () => {
+            if (this.collection.setOffset(offsetInp.val())) {
+              this.collection.loadFromRemote();
+            }
+          });
+        }
+      } else {
+        offsetInp = typeof this.collection.offsetinp === "string" ? document.querySelector(this.collection.offsetinp) : this.collection.offsetinp;
+        if (offsetInp) {
+          this.collection.setOffset(offsetInp.value);
+          offsetInp.addEventListener("change", () => {
+            if (this.collection.setOffset(offsetInp.value)) {
+              this.collection.loadFromRemote();
+            }
+          });
+        }
+      }
+    }
+    /**
+     * Extract button templates from container
+     */
+    extractButtons() {
+      let buttons = {};
+      if (typeof $ !== "undefined") {
+        const pageBtn = $(this.el).find("[name=page]");
+        if (pageBtn.length) {
+          buttons.page = pageBtn.clone();
+          pageBtn.remove();
+        }
+        const prevBtn = $(this.el).find("[name=prev]");
+        if (prevBtn.length) {
+          buttons.prev = prevBtn.clone();
+          prevBtn.remove();
+        }
+        const nextBtn = $(this.el).find("[name=next]");
+        if (nextBtn.length) {
+          buttons.next = nextBtn.clone();
+          nextBtn.remove();
+        }
+        const firstBtn = $(this.el).find("[name=first]");
+        if (firstBtn.length) {
+          buttons.first = firstBtn.clone();
+          firstBtn.remove();
+        }
+        const lastBtn = $(this.el).find("[name=last]");
+        if (lastBtn.length) {
+          buttons.last = lastBtn.clone();
+          lastBtn.remove();
+        }
+      } else {
+        const pageBtn = this.el.querySelector("[name=page]");
+        if (pageBtn) {
+          buttons.page = pageBtn.cloneNode(true);
+          pageBtn.parentNode.removeChild(pageBtn);
+        }
+        const prevBtn = this.el.querySelector("[name=prev]");
+        if (prevBtn) {
+          buttons.prev = prevBtn.cloneNode(true);
+          prevBtn.parentNode.removeChild(prevBtn);
+        }
+        const nextBtn = this.el.querySelector("[name=next]");
+        if (nextBtn) {
+          buttons.next = nextBtn.cloneNode(true);
+          nextBtn.parentNode.removeChild(nextBtn);
+        }
+        const firstBtn = this.el.querySelector("[name=first]");
+        if (firstBtn) {
+          buttons.first = firstBtn.cloneNode(true);
+          firstBtn.parentNode.removeChild(firstBtn);
+        }
+        const lastBtn = this.el.querySelector("[name=last]");
+        if (lastBtn) {
+          buttons.last = lastBtn.cloneNode(true);
+          lastBtn.parentNode.removeChild(lastBtn);
+        }
+      }
+      return buttons;
+    }
+    /**
+     * Setup total count element
+     */
+    setupTotalCount() {
+      if (typeof $ !== "undefined") {
+        this.$totalCount = $(this.collection.totalrecscount);
+      } else {
+        this.totalCountEl = typeof this.collection.totalrecscount === "string" ? document.querySelector(this.collection.totalrecscount) : this.collection.totalrecscount;
+      }
+    }
+    /**
+     * Clear container
+     */
+    clearContainer() {
+      if (typeof $ !== "undefined") {
+        $(this.el).empty();
+        $(this.el).find("[data-type=pages]").empty();
+      } else {
+        this.el.innerHTML = "";
+        const pagesContainer = this.el.querySelector("[data-type=pages]");
+        if (pagesContainer) {
+          pagesContainer.innerHTML = "";
+        }
+      }
+    }
+    /**
+     * Update total count display
+     */
+    updateTotalCount(total) {
+      if (typeof $ !== "undefined" && this.$totalCount && this.$totalCount.length) {
+        if (this.$totalCount[0].tagName === "INPUT") {
+          this.$totalCount.val(total);
+        } else {
+          this.$totalCount.text(total);
+        }
+      } else if (this.totalCountEl) {
+        if (this.totalCountEl.tagName === "INPUT") {
+          this.totalCountEl.value = total;
+        } else {
+          this.totalCountEl.textContent = total;
+        }
+      }
+    }
+    /**
+     * Create and append button element
+     */
+    appendButton(button, clickHandler, title) {
+      let btn;
+      if (typeof $ !== "undefined") {
+        btn = button.clone();
+        if (title !== void 0) {
+          btn.attr("title", title);
+        }
+        btn.on("click", clickHandler);
+        $(this.el).append(btn);
+      } else {
+        btn = button.cloneNode(true);
+        if (title !== void 0) {
+          btn.setAttribute("title", title);
+        }
+        btn.addEventListener("click", clickHandler);
+        this.el.appendChild(btn);
+      }
+      return btn;
+    }
+    /**
+     * Render pagination controls
+     */
+    render() {
+      const pagesToShow = 5;
+      const total = this.collection.total;
+      console.log("Paging render", total, this.buttons);
+      this.updateTotalCount(total);
+      this.clearContainer();
+      this.iniOffset = this.collection.offset * 1;
+      if (this.collection.pageSize) {
+        this.pageSize = this.collection.pageSize;
+      } else if (total - this.iniOffset - this.collection.items.length > 0) {
+        this.pageSize = this.collection.items.length;
+      } else {
+        this.pageSize = this.defaultPageSize;
+      }
+      this.pageSize = this.pageSize * 1;
+      console.log("Paging obj", this, this.pageSize, total);
+      if (this.pageSize > total) {
+        return;
+      }
+      if (this.iniOffset > 0) {
+        if (this.buttons.first) {
+          this.appendButton(
+            this.buttons.first,
+            () => {
+              this.collection.setOffset(0);
+              this.collection.loadFromRemote();
+            },
+            0
+          );
+        }
+        if (this.buttons.prev) {
+          this.appendButton(
+            this.buttons.prev,
+            () => {
+              this.collection.setOffset(this.iniOffset - this.pageSize);
+              this.collection.loadFromRemote();
+            },
+            this.iniOffset - this.pageSize
+          );
+        }
+      }
+      let lowerLimit = Math.floor(this.iniOffset / this.pageSize) - Math.floor(pagesToShow / 2);
+      lowerLimit = lowerLimit < 0 ? 0 : lowerLimit;
+      let upperLimit = Math.floor(this.iniOffset / this.pageSize) + Math.ceil(pagesToShow / 2);
+      upperLimit = upperLimit * this.pageSize < total ? upperLimit : Math.ceil(total / this.pageSize);
+      for (let i = lowerLimit; i < upperLimit; i++) {
+        if (!this.buttons.page) {
+          continue;
+        }
+        const pageOffset = i * this.pageSize;
+        const isActive = Math.floor(this.iniOffset / this.pageSize) === i;
+        let pageBtn;
+        if (typeof $ !== "undefined") {
+          pageBtn = this.buttons.page.clone();
+          pageBtn.text(i + 1).attr("title", pageOffset).on("click", () => {
+            this.collection.setOffset(pageOffset);
+            this.collection.loadFromRemote();
+          });
+          if (isActive) {
+            pageBtn.addClass("active").off("click");
+          }
+          $(this.el).append(pageBtn);
+        } else {
+          pageBtn = this.buttons.page.cloneNode(true);
+          pageBtn.textContent = i + 1;
+          pageBtn.setAttribute("title", pageOffset);
+          if (isActive) {
+            pageBtn.classList.add("active");
+          } else {
+            pageBtn.addEventListener("click", () => {
+              this.collection.setOffset(pageOffset);
+              this.collection.loadFromRemote();
+            });
+          }
+          this.el.appendChild(pageBtn);
+        }
+      }
+      const nxtOffset = this.iniOffset + this.pageSize;
+      if (this.iniOffset + this.pageSize < total) {
+        if (this.buttons.next) {
+          this.appendButton(
+            this.buttons.next,
+            () => {
+              this.collection.setOffset(nxtOffset);
+              this.collection.loadFromRemote();
+            },
+            nxtOffset
+          );
+        }
+        if (this.buttons.last) {
+          const lastPageOffset = (Math.ceil(total / this.pageSize) - 1) * this.pageSize;
+          console.log("last button", total, lastPageOffset, this.pageSize, this.offset);
+          if (lastPageOffset > this.iniOffset * 1) {
+            this.appendButton(
+              this.buttons.last,
+              () => {
+                this.collection.setOffset(lastPageOffset);
+                this.collection.loadFromRemote();
+              },
+              lastPageOffset
+            );
+          }
+        }
+      }
+      let offsetInp;
+      if (typeof $ !== "undefined") {
+        offsetInp = $(this.collection.offsetinp);
+        if (offsetInp.length) {
+          offsetInp.val(this.iniOffset);
+        }
+      } else {
+        offsetInp = typeof this.collection.offsetinp === "string" ? document.querySelector(this.collection.offsetinp) : this.collection.offsetinp;
+        if (offsetInp) {
+          offsetInp.value = this.iniOffset;
+        }
+      }
+    }
+  };
+
   // src/Collection.js
   var Collection = class {
     constructor(opts = {}) {
-      dbg("Collection options", opts);
       let allowedOptions = [
         "url",
         "deleteUrl",
@@ -1440,7 +1761,9 @@ var KViews = (() => {
         "dataBindings",
         "addontop",
         "template",
-        "actions"
+        "uievents",
+        "paging",
+        "pagesizeinp"
       ];
       this.url = null;
       this.deleteUrl = null;
@@ -1458,7 +1781,7 @@ var KViews = (() => {
       this.length = 0;
       this.items = [];
       this.addontop = false;
-      this.actions = [];
+      this.uievents = [];
       this.onafterrender = null;
       this.onbeforeload = null;
       this.callbacks = {};
@@ -1475,7 +1798,12 @@ var KViews = (() => {
         }
       });
       Object.assign(this, options);
-      this.setUrl(this.url);
+      if (options.hasOwnProperty("paging") && $(options.paging).length) {
+        this.paging = new Paging($(options.paging)[0], this);
+      }
+      if (this.url) {
+        this.setUrl(this.url);
+      }
       if (this.view) {
         this.view.collection = this;
       }
@@ -1557,6 +1885,8 @@ var KViews = (() => {
       throw new Error("Not implemented... yet");
     }
     setUrl(url, type) {
+      if (!url)
+        return this;
       switch (type) {
         case "delete":
           this.deleteUrl = createURL(url);
@@ -1751,6 +2081,9 @@ var KViews = (() => {
               loader.parentNode.removeChild(loader);
             }
           }
+          if (this.paging) {
+            this.paging.render();
+          }
           resolve(this);
         }).catch((error2) => {
           this.fail(error2.jqXHR || error2, error2.textStatus, error2.errorThrown);
@@ -1820,7 +2153,7 @@ var KViews = (() => {
       let opts = {
         type: this.type,
         collection: this,
-        actions: this.actions,
+        uievents: this.uievents,
         storage: this.storage
       };
       if (itemData.id && this.url) {
@@ -2190,7 +2523,8 @@ var KViews = (() => {
         el._instance = instance;
       }
       dbg("instance", instance.url);
-      if (instance.url && (typeof instance.dontload === "undefined" || !instance.dontload)) {
+      if (instance.url && (typeof options.dontload === "undefined" || !options.dontload)) {
+        console.log("loadFromRemote now", options, instance);
         instance.loadFromRemote();
       }
       return instance;
@@ -2247,6 +2581,7 @@ var KViews = (() => {
         allowempty: options.disableempty !== true
       };
       options.view = new CollectionView(collectionConfig);
+      console.log("Collection constructor", options);
       let instance = new Collection(options);
       if (options.hasOwnProperty("filter")) {
         let filterEl;
@@ -2311,6 +2646,7 @@ var KViews = (() => {
   KViews2.baseUrl = null;
 
   // src/index.js
+  var index_default = KViews2;
   if (typeof window !== "undefined") {
     window.KViews = KViews2;
   }
@@ -2367,6 +2703,6 @@ var KViews = (() => {
       return this.kviews(opts);
     };
   }
-  return __toCommonJS(index_exports);
+  return KViews2;
 })();
 //# sourceMappingURL=kviews.js.map

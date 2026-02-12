@@ -11,10 +11,12 @@ export { CollectionView } from './CollectionView.js';
 export { Storage } from './Storage.js';
 export { URL, createURL } from './URL.js';
 export { Filtering } from './Filtering.js';
+export { Paging } from './Paging.js';
 export { utilities } from './utilities.js';
 export * from './utils.js';
 
-// Export KViews
+// Export KViews as default for bundle compatibility
+export default KViews;
 export { KViews };
 
 // Make KViews available globally for backward compatibility

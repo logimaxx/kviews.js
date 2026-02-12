@@ -7,7 +7,7 @@
  */
 export function dbg() {
     if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel==3) {
-        console.debug(...arguments);
+        console.trace(...arguments);
     }
 }
 export function log() {

@@ -18,15 +18,35 @@
         </form>
     
         <!-- Collection Example -->
-        <div id="collection" class="row">
+        <div id="collection" class="row" data-pagesizeinp="#pageSize" data-paging="#paging">
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
                         <h2>{{label}}</h2>
                         <p>{{cui}}</p>
                         <button class="btn btn-danger" onclick="$(this).parents('[data-type=item]').data('instance').delete()">Delete</button>
+                        <button class="btn btn-primary edit">Edit</button>
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div id="paging">
+                    <button name="first" class="btn btn-sm btn-outline-secondary" title="0">&lt;&lt;</button>
+                    <button name="prev" class="btn btn-sm btn-outline-secondary" title="-20">&lt;</button>
+                    <button name="page" class="btn btn-sm btn-outline-secondary" title="0">1</button>
+                    <button name="next" class="btn btn-sm btn-outline-secondary" title="20">&gt;</button>
+                    <button name="last" class="btn btn-sm btn-outline-secondary" title="140">&gt;&gt;</button>
+                </div>
+            </div>
+            <div class="col">
+                <select id="pageSize">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
             </div>
         </div>
 
@@ -54,7 +74,20 @@
                 url: baseUrl + '/companies',
                 type: 'companies',
                 pageSize: 5,
+                dontload: true,
+                paging: '#paging',
+                pagesizeinp: '#pageSize',
+                uievents: [
+                    {
+                        selector: '.edit',
+                        event: 'click',
+                        callback: (event, item, view) => {
+                            console.log("edit",event, item, view);
+                        }
+                    }
+                ]
             });
+            collectionInstance.loadFromRemote();
 
             const itemInstance = KViews.createItemInstance($('#item'),baseUrl + '/companies/1');
             

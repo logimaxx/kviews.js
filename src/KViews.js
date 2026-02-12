@@ -124,7 +124,8 @@ export class KViews {
         dbg("instance", instance.url);
 
         // Auto-load if URL is provided
-        if (instance.url && (typeof instance.dontload === "undefined" || !instance.dontload)) {
+        if (instance.url && (typeof options.dontload === "undefined" || !options.dontload)) {
+            console.log("loadFromRemote now", options, instance);
             instance.loadFromRemote();
         }
 
@@ -206,7 +207,7 @@ export class KViews {
         };
 
         options.view = new CollectionView(collectionConfig);
-
+        console.log("Collection constructor", options);
         let instance = new Collection(options);
 
         // Setup filtering

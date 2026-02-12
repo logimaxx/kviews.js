@@ -6,7 +6,7 @@
  */
 
 import { build } from 'esbuild';
-import { readFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -55,6 +55,36 @@ Promise.all([
         sourcemap: false
     })
 ]).then(() => {
+    // Post-process to ensure KViews class is properly exposed
+    // Read the bundle
+    let bundle = readFileSync(join(distDir, 'kviews.js'), 'utf8');
+    
+    // The issue: esbuild assigns the exports object to KViews, but we want the class
+    // Find where KViews2 (the class) is defined and ensure it's what gets assigned to global KViews
+    if (bundle.includes('var KViews2 = class') && bundle.includes('window.KViews = KViews2')) {
+        // Replace: var KViews = (() => { ... return __toCommonJS(...); })();
+        // With: var KViews = (() => { ... return KViews2; })();
+        // This ensures the global KViews variable points to the class, not the exports object
+        
+        // Find the return statement and replace it
+        bundle = bundle.replace(
+            /return __toCommonJS\(index_exports\);/,
+            'return KViews2;'
+        );
+        
+        writeFileSync(join(distDir, 'kviews.js'), bundle);
+    }
+    
+    // Same for minified version
+    let minBundle = readFileSync(join(distDir, 'kviews.min.js'), 'utf8');
+    if (minBundle.includes('window.KViews=')) {
+        minBundle = minBundle.replace(
+            /return __toCommonJS\([^)]+\)/g,
+            'return KViews2'
+        );
+        writeFileSync(join(distDir, 'kviews.min.js'), minBundle);
+    }
+    
     console.log('✅ Bundle created:');
     console.log('   - dist/kviews.js (normal, with sourcemap)');
     console.log('   - dist/kviews.min.js (minified)');
