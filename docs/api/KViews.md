@@ -52,6 +52,11 @@ KViews.helpers.captureFormSubmit('#create-form', (formData) => {
 });
 ```
 
+**Available helpers:**
+- `fillForm(form, item)` - Fill form with item data
+- `captureFormSubmit(form, callback)` - Capture form submission
+- `fetchFormData(form)` - Extract form data as object
+
 ### Static Methods
 
 #### `KViews.createCollectionInstance(el, opts)`

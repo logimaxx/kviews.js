@@ -335,6 +335,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Changelog
 
+### Version 1.0.3
+
+- Fixed bundle to properly expose `KViews.createCollectionInstance` and `KViews.createItemInstance`
+- Refactored Paging to ES6 class
+- Templates now expose attributes directly (use `{{title}}` instead of `{{attributes.title}}`)
+- Utilities exposed via `KViews.helpers` (recommended access method)
+- Removed `getUtilities()` instance methods
+- Storage class now uses Fetch API exclusively (no jQuery dependency)
+- Added comprehensive test suite (Vitest + Playwright)
+- Improved build script to generate both normal and minified bundles
+
 ### Version 1.0.0
 
 - Initial release

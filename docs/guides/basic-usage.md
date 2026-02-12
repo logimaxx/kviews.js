@@ -437,6 +437,8 @@ Utilities are available via `KViews.helpers` (recommended) or can be imported di
 
 ### Pagination
 
+Collections support pagination through `offset` and `pageSize` properties:
+
 ```javascript
 const collection = KViews.createCollectionInstance('#posts', {
     url: '/api/posts',
@@ -453,6 +455,17 @@ collection.loadFromRemote();
 collection.setOffset(Math.max(0, collection.offset - collection.pageSize));
 collection.loadFromRemote();
 ```
+
+For automatic pagination UI controls, use the `Paging` class:
+
+```javascript
+import { Paging } from './src/index.js';
+
+const paging = new Paging('#paging', collection);
+collection.on('load', () => paging.render());
+```
+
+See [Paging API Reference](../api/Paging.md) for complete documentation.
 
 ### Search and Filter
 

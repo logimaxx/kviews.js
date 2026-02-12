@@ -9,6 +9,7 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 - **[Item API](./api/Item.md)** - Single resource item class
 - **[Collection API](./api/Collection.md)** - Collection of items class
 - **[Filtering API](./api/Filtering.md)** - Filter form handling
+- **[Paging API](./api/Paging.md)** - Pagination UI class
 - **[Utilities API](./api/Utilities.md)** - Utility functions
 
 ### User Guides

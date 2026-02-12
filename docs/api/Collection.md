@@ -45,6 +45,9 @@ Element to show when collection is empty.
 #### `filtering` (Filtering)
 Filtering instance (if filter form is configured).
 
+#### `paging` (Paging|null)
+Paging instance (if pagination is configured). Set to `null` by default.
+
 ### Methods
 
 #### `on(eventName, callback)`

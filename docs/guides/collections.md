@@ -202,6 +202,8 @@ item.delete().then(() => {
 
 ## Pagination
 
+Collections support pagination through `offset` and `pageSize` properties. You can also use the `Paging` class to create pagination UI controls.
+
 ### Setting Page Size
 
 ```javascript
@@ -224,6 +226,43 @@ collection.loadFromRemote();
 collection.setOffset(40);
 collection.loadFromRemote();
 ```
+
+### Using the Paging Class
+
+For automatic pagination UI, use the `Paging` class:
+
+```javascript
+import { KViews, Paging } from './src/index.js';
+
+// Create collection
+const collection = KViews.createCollectionInstance('#posts', {
+    url: '/api/posts',
+    type: 'posts',
+    pageSize: 20
+});
+
+// Create paging instance
+const paging = new Paging('#paging-container', collection);
+
+// Render pagination after collection loads
+collection.on('load', () => {
+    paging.render();
+});
+```
+
+**HTML Structure:**
+
+```html
+<div id="paging-container">
+    <button name="first">First</button>
+    <button name="prev">Previous</button>
+    <button name="page">1</button>
+    <button name="next">Next</button>
+    <button name="last">Last</button>
+</div>
+```
+
+See [Paging API Reference](../api/Paging.md) for complete documentation.
 
 ### URL Parameters
 
