@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-02-12T11:18:13.472Z
+ * Built: 2026-03-03T13:46:26.464Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -764,23 +764,19 @@ var KViews = (() => {
         return null;
       }
       dbg("View item", this.item);
+      if (!renderedEl) {
+        return null;
+      }
       if (this.item && this.item.uievents) {
         this.item.uievents.forEach((action) => {
           if (action.selector && action.event && action.callback) {
-            console.log("setup event", action);
-            const actionEl = typeof $ !== "undefined" ? $(renderedEl).find(action.selector)[0] || null : renderedEl.querySelector(action.selector);
-            if (actionEl) {
-              actionEl.addEventListener(action.event, (event) => {
-                event.preventDefault();
-                console.log("event triggered", event, this.item, this);
-                action.callback(event, this.item, this);
-              });
-            }
+            const actionEls = $(renderedEl).find(action.selector);
+            actionEls.on(action.event, (event) => {
+              event.preventDefault();
+              action.callback(event, this.item, this);
+            });
           }
         });
-      }
-      if (!renderedEl) {
-        return null;
       }
       if (doNotAttachToContainer) {
         this.el = renderedEl;
@@ -1757,6 +1753,8 @@ var KViews = (() => {
         "emptyview",
         "filter",
         "pagesize",
+        "onafterrender",
+        "onbeforeload",
         "resourcetype",
         "dataBindings",
         "addontop",
@@ -1793,9 +1791,7 @@ var KViews = (() => {
       }
       let options = {};
       Object.getOwnPropertyNames(opts).forEach((key) => {
-        if (allowedOptions.indexOf(key) !== -1) {
-          options[key] = opts[key];
-        }
+        options[key] = opts[key];
       });
       Object.assign(this, options);
       if (options.hasOwnProperty("paging") && $(options.paging).length) {
@@ -1933,7 +1929,7 @@ var KViews = (() => {
         dbg("Append single item to collection");
         let newItem = this.loadItem(data);
         newItem.render(this.view, this.addontop);
-        if (this.onafterrender) {
+        if (this.onafterrender && typeof this.onafterrender === "function") {
           this.onafterrender(this);
         }
         return newItem;

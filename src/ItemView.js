@@ -192,28 +192,24 @@ export class ItemView {
         }
         
         dbg("View item", this.item);
-
-        if (this.item && this.item.uievents) {
-            this.item.uievents.forEach(action => {
-                if (action.selector && action.event && action.callback) {
-                    console.log("setup event", action);
-                    const actionEl = (typeof $ !== "undefined")
-                        ? $(renderedEl).find(action.selector)[0] || null
-                        : renderedEl.querySelector(action.selector);
-                    if (actionEl) {
-                        actionEl.addEventListener(action.event, (event) => {
-                            event.preventDefault(); 
-                            console.log("event triggered", event, this.item, this);
-                            action.callback(event,this.item, this);
-                        });
-                    }
-                }
-            });
-        }
-
         if (!renderedEl) {
             return null;
         }
+        if (this.item && this.item.uievents) {
+            this.item.uievents.forEach(action => {
+                // console.log("action", action, renderedEl);
+                if (action.selector && action.event && action.callback) {
+                    const actionEls =  $(renderedEl).find(action.selector);
+                    // console.log("action", action, renderedEl, actionEls);
+                    actionEls.on(action.event, (event) => {
+                        event.preventDefault();
+                        // console.log("event triggered", event, this.item, this);
+                        action.callback(event,this.item, this);
+                    });
+                }
+            });
+        }
+        
 
         if (doNotAttachToContainer) {
             this.el = renderedEl;

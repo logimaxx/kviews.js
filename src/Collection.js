@@ -13,7 +13,7 @@ import { Paging } from './Paging.js';
 export class Collection {
     constructor(opts = {}) {
         let allowedOptions = ["url", "deleteUrl", "insertUrl", "updateUrl",
-            "view", "offset", "pageSize", "template", "type", "emptyview", "filter", "pagesize",
+            "view", "offset", "pageSize", "template", "type", "emptyview", "filter", "pagesize","onafterrender","onbeforeload",
             "resourcetype", "dataBindings", "addontop", "template", "uievents", "paging", "pagesizeinp"];
 
         this.url = null;
@@ -47,9 +47,9 @@ export class Collection {
 
         let options = {};
         Object.getOwnPropertyNames(opts).forEach((key) => {
-            if (allowedOptions.indexOf(key) !== -1) {
+            // if (allowedOptions.indexOf(key) !== -1) {
                 options[key] = opts[key];
-            }
+            // }
         });
 
         Object.assign(this, options);
@@ -214,7 +214,7 @@ export class Collection {
             dbg("Append single item to collection");
             let newItem = this.loadItem(data);
             newItem.render(this.view, this.addontop);
-            if (this.onafterrender) {
+            if (this.onafterrender && typeof this.onafterrender === "function") {
                 this.onafterrender(this);
             }
             return newItem;
