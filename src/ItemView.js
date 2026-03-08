@@ -1,4 +1,4 @@
-import { dbg, parseOptions, uid, getBoundObjects, template } from './utils.js';
+import { dbg, log, parseOptions, uid, getBoundObjects, template } from './utils.js';
 
 /**
  * ItemView class - handles rendering of individual items
@@ -180,7 +180,7 @@ export class ItemView {
      * Render the view
      */
     render(doNotAttachToContainer = false, addontop = false) {
-        dbg("ItemView.render called", this.item, this.el);
+        log("ItemView.render called", this.item, this.el);
         
         // Render element
         let renderedEl = this.createElementFromTemplate();
@@ -191,19 +191,19 @@ export class ItemView {
             return null;
         }
         
-        dbg("View item", this.item);
+        log("View item", this.item);
         if (!renderedEl) {
             return null;
         }
         if (this.item && this.item.uievents) {
             this.item.uievents.forEach(action => {
-                // console.log("action", action, renderedEl);
+                log("UI event", action, renderedEl);
                 if (action.selector && action.event && action.callback) {
                     const actionEls =  $(renderedEl).find(action.selector);
-                    // console.log("action", action, renderedEl, actionEls);
+                    log("UI event els", action, renderedEl, actionEls);
                     actionEls.on(action.event, (event) => {
                         event.preventDefault();
-                        // console.log("event triggered", event, this.item, this);
+                        log("UIevent triggered", event, this.item, this);
                         action.callback(event,this.item, this);
                     });
                 }

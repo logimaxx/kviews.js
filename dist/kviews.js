@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-03-03T13:46:26.464Z
+ * Built: 2026-03-05T19:33:48.766Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -50,17 +50,17 @@ var KViews = (() => {
 
   // src/utils.js
   function dbg() {
-    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel == 3) {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel >= 3) {
       console.trace(...arguments);
     }
   }
   function log() {
-    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel == 2) {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel >= 2) {
       console.log(...arguments);
     }
   }
   function error() {
-    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel == 1) {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel >= 1) {
       console.error(...arguments);
     }
   }
@@ -758,21 +758,24 @@ var KViews = (() => {
      * Render the view
      */
     render(doNotAttachToContainer = false, addontop = false) {
-      dbg("ItemView.render called", this.item, this.el);
+      log("ItemView.render called", this.item, this.el);
       let renderedEl = this.createElementFromTemplate();
       if (!renderedEl) {
         return null;
       }
-      dbg("View item", this.item);
+      log("View item", this.item);
       if (!renderedEl) {
         return null;
       }
       if (this.item && this.item.uievents) {
         this.item.uievents.forEach((action) => {
+          log("UI event", action, renderedEl);
           if (action.selector && action.event && action.callback) {
             const actionEls = $(renderedEl).find(action.selector);
+            log("UI event els", action, renderedEl, actionEls);
             actionEls.on(action.event, (event) => {
               event.preventDefault();
+              log("UIevent triggered", event, this.item, this);
               action.callback(event, this.item, this);
             });
           }
@@ -879,6 +882,7 @@ var KViews = (() => {
       this.emptyview = null;
       this.uievents = [];
       this.callbacks = {};
+      this.onafterrender = null;
       try {
         Object.assign(this, parseOptions(options));
       } catch (e) {
@@ -1782,6 +1786,7 @@ var KViews = (() => {
       this.uievents = [];
       this.onafterrender = null;
       this.onbeforeload = null;
+      this.setAttrAsId = null;
       this.callbacks = {};
       this.iterator = -1;
       try {
@@ -2143,7 +2148,9 @@ var KViews = (() => {
      * Load item
      */
     loadItem(itemData) {
+      log("loadItem from collection", itemData);
       if (!itemData) {
+        log("no item data", itemData);
         return null;
       }
       let opts = {
@@ -2152,6 +2159,10 @@ var KViews = (() => {
         uievents: this.uievents,
         storage: this.storage
       };
+      if (this.setAttrAsId && itemData.id == null) {
+        log("set item id from attribute", this.setAttrAsId, itemData);
+        itemData.id = itemData.attributes[this.setAttrAsId];
+      }
       if (itemData.id && this.url) {
         let tmp;
         tmp = createURL(this.url.toString());

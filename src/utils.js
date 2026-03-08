@@ -6,17 +6,17 @@
  * Debug logging function
  */
 export function dbg() {
-    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel==3) {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel>=3) {
         console.trace(...arguments);
     }
 }
 export function log() {
-    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel==2) {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel>=2) {
         console.log(...arguments);
     }
 }
 export function error() {
-    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel==1) {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel>=1) {
         console.error(...arguments);
     }
 }

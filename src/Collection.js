@@ -35,6 +35,7 @@ export class Collection {
         this.uievents = [];
         this.onafterrender = null;
         this.onbeforeload = null;
+        this.setAttrAsId = null;
 
         this.callbacks = {};
         this.iterator = -1;
@@ -472,7 +473,9 @@ export class Collection {
      * Load item
      */
     loadItem(itemData) {
+        log("loadItem from collection", itemData);
         if (!itemData) {
+            log("no item data", itemData);
             return null;
         }
 
@@ -482,6 +485,10 @@ export class Collection {
             uievents: this.uievents,
             storage: this.storage
         };
+        if(this.setAttrAsId && itemData.id==null) {
+            log("set item id from attribute", this.setAttrAsId, itemData);
+            itemData.id = itemData.attributes[this.setAttrAsId];
+        }
 
         if (itemData.id && this.url) {
             // Create new URL instances by cloning and modifying

@@ -24,6 +24,8 @@ export class Item {
         this.emptyview = null;
         this.uievents = [];
         this.callbacks = {};
+        this.onafterrender = null;
+        
         try {
             Object.assign(this, parseOptions(options));
         } catch (e) {
