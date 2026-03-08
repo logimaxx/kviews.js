@@ -121,7 +121,7 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 ## Requirements
 
 - **Handlebars** - Required for template compilation
-- **jQuery** - Optional (falls back to native DOM APIs)
+- **jQuery** - Required for DOM manipulation
 - **Browser** - Modern browser (bundle works everywhere, ES6 modules require Chrome 61+, Firefox 60+, Safari 11+, Edge 16+)
 
 ## Support

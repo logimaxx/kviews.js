@@ -34,7 +34,7 @@ Copy the `src/` directory to your project and import:
   <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   ```
 
-- **jQuery** (Optional) - Falls back to native DOM APIs if not available
+- **jQuery** (Required) - Required for DOM manipulation
   ```html
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   ```
@@ -61,12 +61,13 @@ Create your HTML with a container element and a template:
 #### Using Bundle (No Module System)
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    $(document).ready(function() {
         const collection = KViews.createCollectionInstance(
-            document.getElementById('posts-collection'),
+            $('#posts-collection'),
             {
                 url: '/api/posts',
                 type: 'posts'

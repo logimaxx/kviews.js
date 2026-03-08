@@ -69,4 +69,66 @@ describe('Collection Integration', () => {
 
         expect(loadCallback).toHaveBeenCalled();
     });
+
+    it('should apply item listeners to all items in collection', async () => {
+        const el = document.createElement('div');
+        el.innerHTML = '<div class="item">{{attributes.title}}</div>';
+
+        const itemLoadCallback = vi.fn();
+        const itemUpdateCallback = vi.fn();
+
+        const collection = KViews.createCollectionInstance(el, {
+            url: '/api/posts',
+            type: 'posts',
+            dontload: true,
+            itemOn: {
+                load: itemLoadCallback,
+                update: itemUpdateCallback
+            }
+        });
+
+        // Load items
+        collection.loadFromData([
+            { id: '1', type: 'posts', attributes: { title: 'Test 1' } },
+            { id: '2', type: 'posts', attributes: { title: 'Test 2' } }
+        ]);
+
+        // Wait a bit for events to fire
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Check that item listeners were applied
+        expect(collection.items.length).toBe(2);
+        expect(itemLoadCallback).toHaveBeenCalledTimes(2);
+        
+        // Verify listeners are on items
+        expect(collection.items[0].hasListeners('load')).toBe(true);
+        expect(collection.items[0].hasListeners('update')).toBe(true);
+        expect(collection.items[1].hasListeners('load')).toBe(true);
+        expect(collection.items[1].hasListeners('update')).toBe(true);
+    });
+
+    it('should support itemListeners alias for itemOn', async () => {
+        const el = document.createElement('div');
+        el.innerHTML = '<div class="item">{{attributes.title}}</div>';
+
+        const itemLoadCallback = vi.fn();
+
+        const collection = KViews.createCollectionInstance(el, {
+            url: '/api/posts',
+            type: 'posts',
+            dontload: true,
+            itemListeners: {
+                load: itemLoadCallback
+            }
+        });
+
+        collection.loadFromData([
+            { id: '1', type: 'posts', attributes: { title: 'Test' } }
+        ]);
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(itemLoadCallback).toHaveBeenCalled();
+        expect(collection.items[0].hasListeners('load')).toBe(true);
+    });
 });

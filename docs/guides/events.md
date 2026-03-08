@@ -8,14 +8,25 @@ KViews provides an event system for both Collections and Items, allowing you to 
 
 ## Collection Events
 
+### Before Load Event
+
+Fired before loading data from the server.
+
+```javascript
+collection.on('beforeload', (collection) => {
+    log('About to load collection');
+    // Show loading indicator, etc.
+});
+```
+
 ### Load Event
 
 Fired when collection data is loaded from the server.
 
 ```javascript
 collection.on('load', (collection) => {
-    console.log('Collection loaded:', collection.items.length, 'items');
-    console.log('Total items:', collection.total);
+    log('Collection loaded:', collection.items.length, 'items');
+    log('Total items:', collection.total);
 });
 ```
 
@@ -25,10 +36,10 @@ Fired after the collection view is rendered.
 
 ```javascript
 collection.on('afterrender', (collection) => {
-    console.log('Collection rendered');
+    log('Collection rendered');
     // Access rendered DOM elements
     collection.view.el.querySelectorAll('.post').forEach(post => {
-        console.log('Rendered post:', post);
+        log('Rendered post:', post);
     });
 });
 ```
@@ -39,21 +50,43 @@ Fired when the collection is updated (items added, removed, or modified).
 
 ```javascript
 collection.on('update', (collection) => {
-    console.log('Collection updated');
+    log('Collection updated');
     // Refresh UI, update counters, etc.
 });
 ```
 
 ## Item Events
 
+### Before Load Event
+
+Fired before loading item data from the server.
+
+```javascript
+item.on('beforeload', (item) => {
+    log('About to load item');
+    // Show loading indicator, etc.
+});
+```
+
 ### Load Event
 
-Fired when item data is loaded from the server.
+Fired when item data is loaded (from server or via `loadFromData()`).
 
 ```javascript
 item.on('load', (item) => {
-    console.log('Item loaded:', item.id);
-    console.log('Title:', item.attributes.title);
+    log('Item loaded:', item.id);
+    log('Title:', item.attributes.title);
+});
+```
+
+### After Render Event
+
+Fired after the item view is rendered.
+
+```javascript
+item.on('afterrender', (item) => {
+    log('Item rendered:', item.id);
+    // Access rendered DOM elements, etc.
 });
 ```
 
@@ -63,7 +96,7 @@ Fired when item is updated.
 
 ```javascript
 item.on('update', (item) => {
-    console.log('Item updated:', item.id);
+    log('Item updated:', item.id);
     // Update UI, show notification, etc.
 });
 ```
@@ -74,7 +107,7 @@ Fired when item is removed.
 
 ```javascript
 item.on('remove', (item) => {
-    console.log('Item removed:', item.id);
+    log('Item removed:', item.id);
     // Cleanup, update counters, etc.
 });
 ```
@@ -85,7 +118,7 @@ item.on('remove', (item) => {
 
 ```javascript
 collection.on('load', (collection) => {
-    console.log('Loaded');
+    log('Loaded');
 });
 ```
 
@@ -93,11 +126,11 @@ collection.on('load', (collection) => {
 
 ```javascript
 collection.on('load', (collection) => {
-    console.log('Listener 1');
+    log('Listener 1');
 });
 
 collection.on('load', (collection) => {
-    console.log('Listener 2');
+    log('Listener 2');
 });
 
 // Both listeners fire when 'load' event occurs
@@ -107,15 +140,15 @@ collection.on('load', (collection) => {
 
 ```javascript
 collection.on('load', (collection) => {
-    console.log('Loaded');
+    log('Loaded');
 });
 
 collection.on('afterrender', (collection) => {
-    console.log('Rendered');
+    log('Rendered');
 });
 
 collection.on('update', (collection) => {
-    console.log('Updated');
+    log('Updated');
 });
 ```
 
@@ -128,14 +161,29 @@ const collection = KViews.createCollectionInstance('#posts', {
     url: '/api/posts',
     type: 'posts',
     on: {
+        beforeload: (collection) => {
+            log('About to load');
+        },
         load: (collection) => {
-            console.log('Collection loaded');
+            log('Collection loaded');
         },
         afterrender: (collection) => {
-            console.log('Collection rendered');
+            log('Collection rendered');
         },
         update: (collection) => {
-            console.log('Collection updated');
+            log('Collection updated');
+        }
+    },
+    itemOn: {
+        // Listeners for all items in the collection
+        load: (item) => {
+            log('Item loaded:', item.id);
+        },
+        update: (item) => {
+            log('Item updated:', item.id);
+        },
+        remove: (item) => {
+            log('Item removed:', item.id);
         }
     }
 });
@@ -148,14 +196,20 @@ const item = KViews.createItemInstance('#post', {
     url: '/api/posts/1',
     type: 'posts',
     on: {
+        beforeload: (item) => {
+            log('About to load item');
+        },
         load: (item) => {
-            console.log('Item loaded');
+            log('Item loaded');
+        },
+        afterrender: (item) => {
+            log('Item rendered');
         },
         update: (item) => {
-            console.log('Item updated');
+            log('Item updated');
         },
         remove: (item) => {
-            console.log('Item removed');
+            log('Item removed');
         }
     }
 });
@@ -247,7 +301,7 @@ item.on('update', (item) => {
 const view = item.views[0];
 
 view.on('afterrender', (view) => {
-    console.log('View rendered');
+    log('View rendered');
     // Access rendered element
     const el = view.el;
     // Add animations, bind additional events, etc.
@@ -260,9 +314,9 @@ Events can be chained:
 
 ```javascript
 collection
-    .on('load', (collection) => console.log('Loaded'))
-    .on('afterrender', (collection) => console.log('Rendered'))
-    .on('update', (collection) => console.log('Updated'));
+    .on('load', (collection) => log('Loaded'))
+    .on('afterrender', (collection) => log('Rendered'))
+    .on('update', (collection) => log('Updated'));
 ```
 
 ## Debugging Events
@@ -288,7 +342,7 @@ const collection = KViews.createCollectionInstance('#posts', {
 });
 
 collection.on('load', (collection) => {
-    console.log('Loaded');
+    log('Loaded');
 });
 
 collection.loadFromRemote();
@@ -299,7 +353,7 @@ collection.loadFromRemote();
 ```javascript
 // Store reference for cleanup
 const loadHandler = (collection) => {
-    console.log('Loaded');
+    log('Loaded');
 };
 
 collection.on('load', loadHandler);
@@ -323,7 +377,7 @@ collection.on('load', (collection) => {
 ```javascript
 collection.loadFromRemote()
     .then((collection) => {
-        console.log('Loaded successfully');
+        log('Loaded successfully');
     })
     .catch((error) => {
         console.error('Load failed:', error);

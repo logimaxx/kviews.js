@@ -16,6 +16,7 @@ Download `dist/kviews.js` and include it in your HTML:
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
     <script src="./dist/kviews.js"></script>
 </head>
@@ -28,9 +29,11 @@ Download `dist/kviews.js` and include it in your HTML:
 
     <script>
         // KViews is available globally
-        KViews.createCollectionInstance(document.getElementById('collection'), {
-            url: '/api/posts',
-            type: 'posts'
+        $(document).ready(function() {
+            KViews.createCollectionInstance($('#collection'), {
+                url: '/api/posts',
+                type: 'posts'
+            });
         });
     </script>
 </body>
@@ -62,12 +65,15 @@ cp -r src/ /path/to/your/project/
 #### Import in Your Code
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
-    KViews.createCollectionInstance(document.getElementById('collection'), {
-        url: '/api/posts',
-        type: 'posts'
+    $(document).ready(function() {
+        KViews.createCollectionInstance($('#collection'), {
+            url: '/api/posts',
+            type: 'posts'
+        });
     });
 </script>
 ```
@@ -165,9 +171,9 @@ npx esbuild src/index.js --bundle --format=iife --global-name=KViews --outfile=d
   <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   ```
 
-### Optional
+### Required
 
-- **jQuery** - Falls back to native DOM APIs if not available
+- **jQuery** - Required for DOM manipulation
   ```html
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   ```
@@ -205,14 +211,14 @@ Check if KViews is loaded:
 ```javascript
 // Bundle version
 if (typeof KViews !== 'undefined') {
-    console.log('KViews loaded:', KViews);
+    log('KViews loaded:', KViews);
 } else {
     console.error('KViews not found');
 }
 
 // ES6 modules version
 import { KViews } from './src/index.js';
-console.log('KViews loaded:', KViews);
+log('KViews loaded:', KViews);
 ```
 
 ## Troubleshooting

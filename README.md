@@ -10,7 +10,7 @@ A modern, class-based JavaScript library for binding JSON API data to DOM elemen
 - ✅ **JSON API support** - Full JSON API specification support
 - ✅ **Template rendering** - Handlebars template support for flexible rendering
 - ✅ **Event system** - Comprehensive event handling for reactivity
-- ✅ **jQuery optional** - Works with or without jQuery (falls back to native DOM APIs)
+- ✅ **jQuery required** - Uses jQuery exclusively for DOM manipulation
 - ✅ **Filtering** - Built-in form filtering support
 - ✅ **CRUD operations** - Create, Read, Update, Delete support
 - ✅ **Bundle & ES6 modules** - Use as bundle or ES6 modules
@@ -38,8 +38,8 @@ Or copy the `src/` directory to your project.
 ### Requirements
 
 - **Handlebars** (required) - For template compilation
+- **jQuery** (required) - For DOM manipulation
 - **Modern Browser** - ES6 support (Chrome 61+, Firefox 60+, Safari 11+, Edge 16+)
-- **jQuery** (optional) - Falls back to native DOM APIs if not available
 
 ## Quick Start
 
@@ -112,7 +112,7 @@ const collection = KViews.createCollectionInstance('#posts', {
 
 // Listen to events
 collection.on('load', (collection) => {
-    console.log('Loaded', collection.items.length, 'items');
+    log('Loaded', collection.items.length, 'items');
 });
 
 // Add new item
@@ -334,6 +334,28 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Changelog
+
+### Version 2.0.0 (Breaking Changes)
+
+**Event System Refactoring:**
+- ✅ **Unified event system** - Removed dual callback system (`onafterrender`, `onbeforeload` properties)
+- ✅ **New event methods** - Added `off()`, `once()`, `emit()`, `hasListeners()` methods
+- ✅ **Standardized events** - All events now use `on()` method exclusively
+- ✅ **New Item events** - Added `beforeload`, `load`, `afterrender` events (previously missing or inconsistent)
+- ✅ **Collection events** - Added `beforeload` event
+- ✅ **Return value consistency** - `Collection.onupdate()` now returns `this` for chaining
+
+**Breaking Changes:**
+- ❌ **Removed:** `collection.onafterrender` and `collection.onbeforeload` properties
+- ❌ **Removed:** `item.onafterrender` property
+- ✅ **Migration:** Use `collection.on('afterrender', callback)` instead of `collection.onafterrender = callback`
+- ✅ **Migration:** Use `collection.on('beforeload', callback)` instead of `collection.onbeforeload = callback`
+
+**Improvements:**
+- Event listeners can now be removed with `off()`
+- One-time listeners supported with `once()`
+- Manual event triggering with `emit()`
+- Consistent event API across Collection and Item classes
 
 ### Version 1.0.3
 

@@ -110,8 +110,7 @@ describe('Item Integration', () => {
             attributes: { title: 'Test' }
         });
 
-        // Note: Events might need to be triggered manually in tests
-        // This depends on your event implementation
-        expect(item.callbacks.load).toBeDefined();
+        // loadFromData now triggers 'load' event
+        expect(loadCallback).toHaveBeenCalledWith(item);
     });
 });

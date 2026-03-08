@@ -44,9 +44,14 @@ const collection = KViews.createCollectionInstance('#posts', {
     addontop: true,               // Add new items at top
     disableempty: false,          // Allow empty state
     dontload: false,              // Auto-load on creation
-    on: {                         // Event listeners
-        load: (collection) => console.log('Loaded'),
-        afterrender: (collection) => console.log('Rendered')
+    on: {                         // Event listeners for collection
+        load: (collection) => log('Loaded'),
+        afterrender: (collection) => log('Rendered')
+    },
+    itemOn: {                     // Event listeners for all items in collection
+        load: (item) => log('Item loaded:', item.id),
+        update: (item) => log('Item updated:', item.id),
+        remove: (item) => log('Item removed:', item.id)
     }
 });
 ```
@@ -77,7 +82,7 @@ const collection = KViews.createCollectionInstance('#posts', {
 
 // Load manually
 collection.loadFromRemote().then((collection) => {
-    console.log('Loaded', collection.items.length, 'items');
+    log('Loaded', collection.items.length, 'items');
 });
 ```
 
@@ -118,13 +123,13 @@ const secondItem = collection.items[1];
 ```javascript
 // Iterate all items
 collection.each((item) => {
-    console.log(item.id, item.attributes.title);
+    log(item.id, item.attributes.title);
 });
 
 // Sequential access
 collection.rewind();
 while (item = collection.next()) {
-    console.log(item);
+    log(item);
 }
 
 // Previous item
@@ -156,7 +161,7 @@ collection.append({
         content: 'Post content'
     }
 }).then((item) => {
-    console.log('Item created:', item.id);
+    log('Item created:', item.id);
 });
 ```
 
@@ -196,7 +201,7 @@ collection.render(); // Re-render
 ```javascript
 item.delete().then(() => {
     // Item is automatically removed from collection
-    console.log('Item deleted');
+    log('Item deleted');
 });
 ```
 
@@ -319,30 +324,78 @@ Available operators: `=`, `contains`, `>`, `<`, `>=`, `<=`
 
 ## Events
 
-### Load Event
+### Collection Events
+
+#### Load Event
 
 ```javascript
 collection.on('load', (collection) => {
-    console.log('Collection loaded:', collection.items.length, 'items');
-    console.log('Total:', collection.total);
+    log('Collection loaded:', collection.items.length, 'items');
+    log('Total:', collection.total);
 });
 ```
 
-### After Render Event
+#### After Render Event
 
 ```javascript
 collection.on('afterrender', (collection) => {
-    console.log('Collection rendered');
+    log('Collection rendered');
     // Access rendered DOM elements
 });
 ```
 
-### Update Event
+#### Update Event
 
 ```javascript
 collection.on('update', (collection) => {
-    console.log('Collection updated');
+    log('Collection updated');
     // Triggered when items are added/removed/updated
+});
+```
+
+### Item Events in Collections
+
+When creating a collection, you can configure event listeners that will be automatically applied to all items created within that collection using the `itemOn` option:
+
+```javascript
+const collection = KViews.createCollectionInstance('#posts', {
+    url: '/api/posts',
+    type: 'posts',
+    itemOn: {
+        load: (item) => {
+            log('Item loaded:', item.id);
+            // This will fire for every item when it's loaded
+        },
+        update: (item) => {
+            log('Item updated:', item.id);
+            // Show notification, update UI, etc.
+        },
+        remove: (item) => {
+            log('Item removed:', item.id);
+            // Cleanup, update counters, etc.
+        },
+        afterrender: (item) => {
+            log('Item rendered:', item.id);
+            // Access rendered DOM, attach custom handlers, etc.
+        }
+    }
+});
+```
+
+**Note:** These listeners are applied to **all** items created in the collection, including:
+- Items loaded from the API (`loadFromRemote()`)
+- Items added via `loadFromData()`
+- Items created via `append()` or `createItem()`
+
+**Alternative syntax:** You can also use `itemListeners` instead of `itemOn`:
+
+```javascript
+const collection = KViews.createCollectionInstance('#posts', {
+    url: '/api/posts',
+    type: 'posts',
+    itemListeners: {
+        load: (item) => log('Item loaded:', item.id)
+    }
 });
 ```
 
@@ -442,7 +495,7 @@ window.addEventListener('scroll', () => {
 
 ```javascript
 collection.refresh().then((collection) => {
-    console.log('Collection refreshed');
+    log('Collection refreshed');
 });
 ```
 

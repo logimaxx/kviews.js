@@ -60,15 +60,85 @@ Register an event listener.
 **Returns:** Item instance (for chaining)
 
 **Events:**
-- `load` - Fired when item loads
+- `beforeload` - Fired before loading data from remote
+- `load` - Fired when item loads (from remote or data)
+- `afterrender` - Fired after rendering
 - `update` - Fired when item updates
 - `remove` - Fired when item is removed
 
 **Example:**
 ```javascript
 item.on('update', (item) => {
-    console.log('Item updated:', item);
+    log('Item updated:', item);
 });
+```
+
+#### `off(eventName, callback?)`
+
+Remove event listener(s).
+
+**Parameters:**
+- `eventName` (String) - Event name
+- `callback` (Function, optional) - Specific callback to remove. If not provided, removes all listeners for the event
+
+**Returns:** Item instance (for chaining)
+
+**Example:**
+```javascript
+const handler = (item) => { log('Updated'); };
+item.on('update', handler);
+// Later...
+item.off('update', handler); // Remove specific listener
+item.off('update'); // Remove all 'update' listeners
+item.off(); // Remove all listeners
+```
+
+#### `once(eventName, callback)`
+
+Register a one-time event listener (fires once, then removes itself).
+
+**Parameters:**
+- `eventName` (String) - Event name
+- `callback` (Function) - Callback function
+
+**Returns:** Item instance (for chaining)
+
+**Example:**
+```javascript
+item.once('load', (item) => {
+    log('First load completed');
+});
+```
+
+#### `emit(eventName, ...args)`
+
+Manually trigger an event.
+
+**Parameters:**
+- `eventName` (String) - Event name
+- `...args` - Arguments to pass to callbacks
+
+**Returns:** Item instance (for chaining)
+
+**Example:**
+```javascript
+item.emit('update', item);
+```
+
+#### `hasListeners(eventName)`
+
+Check if an event has any listeners.
+
+**Parameters:**
+- `eventName` (String) - Event name
+
+**Returns:** Boolean - True if event has listeners
+
+**Example:**
+```javascript
+if (item.hasListeners('load')) {
+    log('Item has load listeners');
+}
 ```
 
 #### `setUrl(url, type)`
@@ -97,7 +167,7 @@ Load item data from remote API.
 **Example:**
 ```javascript
 item.loadFromRemote().then((item) => {
-    console.log('Item loaded:', item);
+    log('Item loaded:', item);
 });
 ```
 
@@ -165,7 +235,7 @@ Update item attributes and relationships.
 item.update(
     title: 'Updated Title'
 }).then((item) => {
-    console.log('Item updated');
+    log('Item updated');
 });
 ```
 
@@ -182,7 +252,7 @@ Delete item from server and remove element from UI accordingly.
 **Example:**
 ```javascript
 item.delete().then(() => {
-    console.log('Item deleted');
+    log('Item deleted');
 });
 ```
 

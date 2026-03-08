@@ -8,17 +8,9 @@ export const utilities = {
      * Fill form fields with data from instance
      */
     fillForm: function (form, instance) {
-        let formEl;
-        if (typeof $ !== "undefined") {
-            formEl = $(form)[0];
-            if ($(form).prop("tagName") !== "FORM") {
-                return null;
-            }
-        } else {
-            formEl = form.nodeName ? form : form[0];
-            if (formEl.tagName !== "FORM") {
-                return null;
-            }
+        let formEl = $(form)[0];
+        if ($(form).prop("tagName") !== "FORM") {
+            return null;
         }
 
         if (!instance || !instance.hasOwnProperty("attributes")) {
@@ -31,25 +23,15 @@ export const utilities = {
             }
             let val = instance.attributes[attrName];
             let inp = formEl.elements[attrName];
-
-            if (typeof $ !== "undefined") {
-                let $inp = $(inp);
-                if (instance.attributes[attrName] && typeof instance.attributes[attrName] === "object" && instance.attributes[attrName].hasOwnProperty("id")) {
-                    val = instance.attributes[attrName].id;
-                }
-                if ($inp.attr('type') === 'date') {
-                    val = val ? val.substr(0, 10) : val;
-                }
-                $inp.val(val);
-            } else {
-                if (instance.attributes[attrName] && typeof instance.attributes[attrName] === "object" && instance.attributes[attrName].hasOwnProperty("id")) {
-                    val = instance.attributes[attrName].id;
-                }
-                if (inp.type === 'date') {
-                    val = val ? val.substr(0, 10) : val;
-                }
-                inp.value = val;
+            let $inp = $(inp);
+            
+            if (instance.attributes[attrName] && typeof instance.attributes[attrName] === "object" && instance.attributes[attrName].hasOwnProperty("id")) {
+                val = instance.attributes[attrName].id;
             }
+            if ($inp.attr('type') === 'date') {
+                val = val ? val.substr(0, 10) : val;
+            }
+            $inp.val(val);
         });
 
         if (!instance.relationships) {
@@ -62,11 +44,7 @@ export const utilities = {
             }
 
             if (!instance.relationships[relName]) {
-                if (typeof $ !== "undefined") {
-                    $(formEl.elements[relName]).val(null);
-                } else {
-                    formEl.elements[relName].value = null;
-                }
+                $(formEl.elements[relName]).val(null);
                 return;
             }
 
@@ -78,40 +56,19 @@ export const utilities = {
                 rel.forEach((relItem) => {
                     vals.push(relItem.id);
                 });
-                if (typeof $ !== "undefined") {
-                    $(formElRel).val(vals);
-                } else {
-                    if (formElRel.multiple) {
-                        Array.from(formElRel.options).forEach(opt => {
-                            opt.selected = vals.indexOf(opt.value) !== -1;
-                        });
-                    } else {
-                        formElRel.value = vals[0] || null;
-                    }
-                }
+                $(formElRel).val(vals);
             } else {
                 dbg("set ", relName, rel);
                 if (formElRel.tagName === "SELECT") {
-                    let lbl = typeof $ !== "undefined" ? $(formElRel).data("label") : (formElRel.dataset ? formElRel.dataset.label : null);
+                    let lbl = $(formElRel).data("label");
                     let lblVal = rel.hasOwnProperty("attributes") && rel.attributes[lbl] ? rel.attributes[lbl] : rel.id;
 
-                    if (typeof $ !== "undefined") {
-                        $("<option>")
-                            .val(rel.id)
-                            .text(lblVal)
-                            .appendTo($(formElRel));
-                    } else {
-                        let option = document.createElement("option");
-                        option.value = rel.id;
-                        option.textContent = lblVal;
-                        formElRel.appendChild(option);
-                    }
+                    $("<option>")
+                        .val(rel.id)
+                        .text(lblVal)
+                        .appendTo($(formElRel));
                 }
-                if (typeof $ !== "undefined") {
-                    $(formElRel).val(rel.id);
-                } else {
-                    formElRel.value = rel.id;
-                }
+                $(formElRel).val(rel.id);
             }
         });
     },
@@ -120,31 +77,17 @@ export const utilities = {
      * Capture form submit event and redirect it to callback
      */
     captureFormSubmit: function (form, cb) {
-        let formEl;
-        if (typeof $ !== "undefined") {
-            formEl = $(form);
-            if (formEl.prop("tagName") !== "FORM" || typeof cb !== "function") {
-                return;
-            }
-
-            formEl.off("submit").on("submit", (event) => {
-                event.preventDefault();
-                let frm = formEl[0];
-                cb(this.fetchFormData(frm), event);
-            });
-            return formEl;
-        } else {
-            formEl = form.nodeName ? form : form[0];
-            if (formEl.tagName !== "FORM" || typeof cb !== "function") {
-                return;
-            }
-
-            formEl.addEventListener("submit", (event) => {
-                event.preventDefault();
-                cb(this.fetchFormData(formEl), event);
-            });
-            return formEl;
+        let formEl = $(form);
+        if (formEl.prop("tagName") !== "FORM" || typeof cb !== "function") {
+            return;
         }
+
+        formEl.off("submit").on("submit", (event) => {
+            event.preventDefault();
+            let frm = formEl[0];
+            cb(this.fetchFormData(frm), event);
+        });
+        return formEl;
     },
 
     /**
@@ -152,38 +95,21 @@ export const utilities = {
      */
     fetchFormData: function (form) {
         // Normalize form element (handle jQuery, string selector, or DOM element)
-        let formEl;
-        if (typeof $ !== "undefined") {
-            formEl = $(form)[0];
-        } else {
-            formEl = form.nodeName ? form : form[0];
-        }
+        let formEl = $(form)[0];
 
         let formElements = {};
         Object.getOwnPropertyNames(formEl.elements).forEach((item) => {
             let el = formEl.elements[item];
-            let name, value;
-
-            if (typeof $ !== "undefined") {
-                let $item = $(el);
-                if (!$item.attr("name") || $item.attr("name") === "") {
-                    return;
-                }
-                if ($item.attr("type") === "checkbox" && !$item[0].checked) {
-                    return;
-                }
-                name = $item.attr("name");
-                value = $item.val();
-            } else {
-                if (!el.name || el.name === "") {
-                    return;
-                }
-                if (el.type === "checkbox" && !el.checked) {
-                    return;
-                }
-                name = el.name;
-                value = el.value;
+            let $item = $(el);
+            
+            if (!$item.attr("name") || $item.attr("name") === "") {
+                return;
             }
+            if ($item.attr("type") === "checkbox" && !$item[0].checked) {
+                return;
+            }
+            let name = $item.attr("name");
+            let value = $item.val();
 
             // Handle array notation: name="field[]" creates formElements.field = [value1, value2, ...]
             let arrayMatch = /(\w+)\[\]/.exec(name);

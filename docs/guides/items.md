@@ -42,8 +42,8 @@ const item = KViews.createItemInstance('#post-detail', {
     strict: false,             // Strict mode
     dontload: false,          // Auto-load on creation
     on: {                      // Event listeners
-        load: (item) => console.log('Loaded'),
-        update: (item) => console.log('Updated')
+        load: (item) => log('Loaded'),
+        update: (item) => log('Updated')
     }
 });
 ```
@@ -92,7 +92,7 @@ const item = KViews.createItemInstance('#post-detail', {
 });
 
 item.loadFromRemote().then((item) => {
-    console.log('Item loaded:', item.attributes.title);
+    log('Item loaded:', item.attributes.title);
 });
 ```
 
@@ -154,12 +154,12 @@ item.attributes.title = 'New Title';
 ```javascript
 // 1:1 relationship
 const author = item.relationships.author;
-console.log(author.attributes.name);
+log(author.attributes.name);
 
 // 1:N relationship
 const tags = item.relationships.tags;
 tags.forEach(tag => {
-    console.log(tag.attributes.name);
+    log(tag.attributes.name);
 });
 ```
 
@@ -180,7 +180,7 @@ item.update({
     title: 'Updated Title',
     content: 'Updated content'
 }).then((item) => {
-    console.log('Item updated');
+    log('Item updated');
 });
 ```
 
@@ -227,7 +227,7 @@ item.update({
 
 // Sync later
 item.sync().then(() => {
-    console.log('Synced');
+    log('Synced');
 });
 ```
 
@@ -237,7 +237,7 @@ item.sync().then(() => {
 
 ```javascript
 item.delete().then(() => {
-    console.log('Item deleted from server');
+    log('Item deleted from server');
     // Item is automatically removed from views and collection
 });
 ```
@@ -254,7 +254,7 @@ item.delete({
 
 ```javascript
 item.remove().then(() => {
-    console.log('Item removed from views');
+    log('Item removed from views');
     // Item still exists on server
 });
 ```
@@ -313,8 +313,8 @@ item.unbindView(view);
 
 ```javascript
 item.on('load', (item) => {
-    console.log('Item loaded:', item.id);
-    console.log('Title:', item.attributes.title);
+    log('Item loaded:', item.id);
+    log('Title:', item.attributes.title);
 });
 ```
 
@@ -322,7 +322,7 @@ item.on('load', (item) => {
 
 ```javascript
 item.on('update', (item) => {
-    console.log('Item updated:', item.id);
+    log('Item updated:', item.id);
 });
 ```
 
@@ -330,7 +330,7 @@ item.on('update', (item) => {
 
 ```javascript
 item.on('remove', (item) => {
-    console.log('Item removed:', item.id);
+    log('Item removed:', item.id);
 });
 ```
 
@@ -363,14 +363,14 @@ item.render(collectionView, true); // addontop = true
 // 1:1 relationship
 const author = item.relationships.author;
 if (author) {
-    console.log(author.attributes.name);
+    log(author.attributes.name);
 }
 
 // 1:N relationship
 const comments = item.relationships.comments;
 if (comments && comments.length) {
     comments.forEach(comment => {
-        console.log(comment.attributes.text);
+        log(comment.attributes.text);
     });
 }
 ```
@@ -490,6 +490,6 @@ if (item.attributes.published) {
 
 ```javascript
 item.refresh().then((item) => {
-    console.log('Item refreshed');
+    log('Item refreshed');
 });
 ```

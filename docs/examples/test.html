@@ -102,7 +102,7 @@
                 const id = data.get('id');
                 const label = data.get('label');
                 const cui = data.get('cui');
-                collectionInstance.newItem({ label: label, cui: cui});
+                collectionInstance.append({ label: label, cui: cui});
             });
         });
     </script>

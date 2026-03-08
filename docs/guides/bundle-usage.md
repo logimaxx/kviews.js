@@ -50,7 +50,10 @@ npx esbuild src/index.js --bundle --format=iife --global-name=KViews --outfile=d
         </div>
     </div>
 
-    <!-- Load Handlebars first -->
+    <!-- Load jQuery first -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Load Handlebars -->
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
     
     <!-- Load KViews bundle -->
@@ -58,9 +61,11 @@ npx esbuild src/index.js --bundle --format=iife --global-name=KViews --outfile=d
     
     <!-- Use KViews -->
     <script>
-        KViews.createCollectionInstance(document.getElementById('collection'), {
-            url: '/api/posts',
-            type: 'posts'
+        $(document).ready(function() {
+            KViews.createCollectionInstance($('#collection'), {
+                url: '/api/posts',
+                type: 'posts'
+            });
         });
     </script>
 </body>
@@ -73,7 +78,7 @@ When the bundle is loaded, `KViews` is available globally:
 
 ```javascript
 // Available as window.KViews
-console.log(KViews);
+log(KViews);
 
 // Create collection
 const collection = KViews.createCollectionInstance('#posts', {
@@ -171,7 +176,7 @@ If jQuery is loaded, the bundle automatically registers jQuery plugins:
         
         // Listen to events
         collection.on('load', (collection) => {
-            console.log('Loaded', collection.items.length, 'items');
+            log('Loaded', collection.items.length, 'items');
         });
     </script>
 </body>
@@ -191,7 +196,7 @@ const collection = KViews.createCollectionInstance('#posts', {
 
 // Access Item class through collection items
 collection.items.forEach(item => {
-    console.log(item instanceof Item); // Item is internal
+    log(item instanceof Item); // Item is internal
 });
 
 // Utilities are available via KViews.helpers (recommended)
@@ -248,6 +253,6 @@ The bundle works in:
 ### Script Loading Order
 Always load in this order:
 1. Handlebars
-2. jQuery (optional)
+2. jQuery (required)
 3. KViews bundle
 4. Your application code

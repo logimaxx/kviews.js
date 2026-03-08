@@ -114,8 +114,10 @@ describe('Storage', () => {
 
     describe('baseUrl handling', () => {
         it('should prepend baseUrl if set', async () => {
-            // Mock KViews globally
-            global.KViews = { baseUrl: 'https://api.example.com' };
+            // Import KViews to set baseUrl
+            const { KViews } = await import('../../src/KViews.js');
+            KViews.baseUrl = 'https://api.example.com';
+            global.KViews = KViews; // Make it available globally
 
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -131,6 +133,10 @@ describe('Storage', () => {
                 'https://api.example.com/api/posts',
                 expect.any(Object)
             );
+            
+            // Cleanup
+            KViews.baseUrl = null;
+            delete global.KViews;
         });
     });
 });

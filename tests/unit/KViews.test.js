@@ -33,8 +33,18 @@ describe('KViews', () => {
         });
 
         it('should create collection instance with valid element', () => {
+            // Mock fetch to prevent actual network calls
+            const mockFetch = vi.fn(() => Promise.resolve({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{"data": []}')
+            }));
+            global.fetch = mockFetch;
+            
             const el = document.createElement('div');
-            el.innerHTML = '<div class="item">{{attributes.title}}</div>';
+            el.innerHTML = '<div class="item">{{title}}</div>';
             
             const collection = KViews.createCollectionInstance(el, {
                 url: '/api/posts',
@@ -48,6 +58,16 @@ describe('KViews', () => {
         });
 
         it('should handle string URL option', () => {
+            // Mock fetch to prevent actual network calls
+            const mockFetch = vi.fn(() => Promise.resolve({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{"data": []}')
+            }));
+            global.fetch = mockFetch;
+            
             const el = document.createElement('div');
             const collection = KViews.createCollectionInstance(el, '/api/posts', {
                 type: 'posts',
@@ -59,6 +79,16 @@ describe('KViews', () => {
         });
 
         it('should update existing instance if element already has one', () => {
+            // Mock fetch to prevent actual network calls
+            const mockFetch = vi.fn(() => Promise.resolve({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{"data": []}')
+            }));
+            global.fetch = mockFetch;
+            
             const el = document.createElement('div');
             
             const collection1 = KViews.createCollectionInstance(el, {
@@ -100,7 +130,7 @@ describe('KViews', () => {
 
         it('should create item instance with initial data', () => {
             const el = document.createElement('div');
-            el.innerHTML = '<h1>{{attributes.title}}</h1>';
+            el.innerHTML = '<h1>{{title}}</h1>';
             
             const item = KViews.createItemInstance(el, {
                 url: '/api/posts/1',
@@ -115,7 +145,11 @@ describe('KViews', () => {
             });
 
             expect(item).toBeDefined();
+            // Data should be loaded synchronously when provided
+            // Note: loadFromData is called in constructor, which should set id, type, and attributes
             expect(item.id).toBe('1');
+            expect(item.type).toBe('posts');
+            expect(item.attributes).toBeDefined();
             expect(item.attributes.title).toBe('Test Post');
         });
     });

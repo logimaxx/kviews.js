@@ -1,4 +1,4 @@
-import { dbg } from './utils.js';
+import { dbg, log } from './utils.js';
 
 /**
  * Paging class - handles pagination UI for collections
@@ -6,13 +6,7 @@ import { dbg } from './utils.js';
 export class Paging {
     constructor(pagingEl, collection) {
         this.collection = collection;
-        
-        // Normalize element (handle jQuery or DOM element)
-        if (typeof $ !== "undefined") {
-            this.el = $(pagingEl);
-        } else {
-            this.el = pagingEl.nodeName ? pagingEl : pagingEl[0];
-        }
+        this.el = $(pagingEl);
 
 
         // Link paging to collection
@@ -33,7 +27,7 @@ export class Paging {
 
         // Extract button templates
         this.buttons = this.extractButtons();
-        console.log("buttons", this.buttons);
+        log("buttons", this.buttons);
 
         // Get total count element
         this.setupTotalCount();
@@ -46,29 +40,14 @@ export class Paging {
      * Setup page size input handler
      */
     setupPageSizeInput() {
-        let pageSizeInp;
-        if (typeof $ !== "undefined") {
-            pageSizeInp = $(this.collection.pagesizeinp);
-            if (pageSizeInp.length) {
-                this.collection.setPageSize(pageSizeInp.val());
-                pageSizeInp.off("change").on("change", () => {
-                    if (this.collection.setPageSize(pageSizeInp.val())) {
-                        this.collection.loadFromRemote();
-                    }
-                });
-            }
-        } else {
-            pageSizeInp = typeof this.collection.pagesizeinp === "string" 
-                ? document.querySelector(this.collection.pagesizeinp)
-                : this.collection.pagesizeinp;
-            if (pageSizeInp) {
-                this.collection.setPageSize(pageSizeInp.value);
-                pageSizeInp.addEventListener("change", () => {
-                    if (this.collection.setPageSize(pageSizeInp.value)) {
-                        this.collection.loadFromRemote();
-                    }
-                });
-            }
+        let pageSizeInp = $(this.collection.pagesizeinp);
+        if (pageSizeInp.length) {
+            this.collection.setPageSize(pageSizeInp.val());
+            pageSizeInp.off("change").on("change", () => {
+                if (this.collection.setPageSize(pageSizeInp.val())) {
+                    this.collection.loadFromRemote();
+                }
+            });
         }
     }
 
@@ -76,29 +55,14 @@ export class Paging {
      * Setup offset input handler
      */
     setupOffsetInput() {
-        let offsetInp;
-        if (typeof $ !== "undefined") {
-            offsetInp = $(this.collection.offsetinp);
-            if (offsetInp.length) {
-                this.collection.setOffset(offsetInp.val());
-                offsetInp.off("change").on("change", () => {
-                    if (this.collection.setOffset(offsetInp.val())) {
-                        this.collection.loadFromRemote();
-                    }
-                });
-            }
-        } else {
-            offsetInp = typeof this.collection.offsetinp === "string"
-                ? document.querySelector(this.collection.offsetinp)
-                : this.collection.offsetinp;
-            if (offsetInp) {
-                this.collection.setOffset(offsetInp.value);
-                offsetInp.addEventListener("change", () => {
-                    if (this.collection.setOffset(offsetInp.value)) {
-                        this.collection.loadFromRemote();
-                    }
-                });
-            }
+        let offsetInp = $(this.collection.offsetinp);
+        if (offsetInp.length) {
+            this.collection.setOffset(offsetInp.val());
+            offsetInp.off("change").on("change", () => {
+                if (this.collection.setOffset(offsetInp.val())) {
+                    this.collection.loadFromRemote();
+                }
+            });
         }
     }
 
@@ -108,68 +72,35 @@ export class Paging {
     extractButtons() {
         let buttons = {};
 
-        if (typeof $ !== "undefined") {
-            // Clone and remove from DOM
-            const pageBtn = $(this.el).find("[name=page]");
-            if (pageBtn.length) {
-                buttons.page = pageBtn.clone();
-                pageBtn.remove();
-            }
+        // Clone and remove from DOM
+        const pageBtn = $(this.el).find("[name=page]");
+        if (pageBtn.length) {
+            buttons.page = pageBtn.clone();
+            pageBtn.remove();
+        }
 
-            const prevBtn = $(this.el).find("[name=prev]");
-            if (prevBtn.length) {
-                buttons.prev = prevBtn.clone();
-                prevBtn.remove();
-            }
+        const prevBtn = $(this.el).find("[name=prev]");
+        if (prevBtn.length) {
+            buttons.prev = prevBtn.clone();
+            prevBtn.remove();
+        }
 
-            const nextBtn = $(this.el).find("[name=next]");
-            if (nextBtn.length) {
-                buttons.next = nextBtn.clone();
-                nextBtn.remove();
-            }
+        const nextBtn = $(this.el).find("[name=next]");
+        if (nextBtn.length) {
+            buttons.next = nextBtn.clone();
+            nextBtn.remove();
+        }
 
-            const firstBtn = $(this.el).find("[name=first]");
-            if (firstBtn.length) {
-                buttons.first = firstBtn.clone();
-                firstBtn.remove();
-            }
+        const firstBtn = $(this.el).find("[name=first]");
+        if (firstBtn.length) {
+            buttons.first = firstBtn.clone();
+            firstBtn.remove();
+        }
 
-            const lastBtn = $(this.el).find("[name=last]");
-            if (lastBtn.length) {
-                buttons.last = lastBtn.clone();
-                lastBtn.remove();
-            }
-        } else {
-            // Clone and remove from DOM
-            const pageBtn = this.el.querySelector("[name=page]");
-            if (pageBtn) {
-                buttons.page = pageBtn.cloneNode(true);
-                pageBtn.parentNode.removeChild(pageBtn);
-            }
-
-            const prevBtn = this.el.querySelector("[name=prev]");
-            if (prevBtn) {
-                buttons.prev = prevBtn.cloneNode(true);
-                prevBtn.parentNode.removeChild(prevBtn);
-            }
-
-            const nextBtn = this.el.querySelector("[name=next]");
-            if (nextBtn) {
-                buttons.next = nextBtn.cloneNode(true);
-                nextBtn.parentNode.removeChild(nextBtn);
-            }
-
-            const firstBtn = this.el.querySelector("[name=first]");
-            if (firstBtn) {
-                buttons.first = firstBtn.cloneNode(true);
-                firstBtn.parentNode.removeChild(firstBtn);
-            }
-
-            const lastBtn = this.el.querySelector("[name=last]");
-            if (lastBtn) {
-                buttons.last = lastBtn.cloneNode(true);
-                lastBtn.parentNode.removeChild(lastBtn);
-            }
+        const lastBtn = $(this.el).find("[name=last]");
+        if (lastBtn.length) {
+            buttons.last = lastBtn.clone();
+            lastBtn.remove();
         }
 
         return buttons;
@@ -179,46 +110,26 @@ export class Paging {
      * Setup total count element
      */
     setupTotalCount() {
-        if (typeof $ !== "undefined") {
-            this.$totalCount = $(this.collection.totalrecscount);
-        } else {
-            this.totalCountEl = typeof this.collection.totalrecscount === "string"
-                ? document.querySelector(this.collection.totalrecscount)
-                : this.collection.totalrecscount;
-        }
+        this.$totalCount = $(this.collection.totalrecscount);
     }
 
     /**
      * Clear container
      */
     clearContainer() {
-        if (typeof $ !== "undefined") {
-            $(this.el).empty();
-            $(this.el).find("[data-type=pages]").empty();
-        } else {
-            this.el.innerHTML = "";
-            const pagesContainer = this.el.querySelector("[data-type=pages]");
-            if (pagesContainer) {
-                pagesContainer.innerHTML = "";
-            }
-        }
+        $(this.el).empty();
+        $(this.el).find("[data-type=pages]").empty();
     }
 
     /**
      * Update total count display
      */
     updateTotalCount(total) {
-        if (typeof $ !== "undefined" && this.$totalCount && this.$totalCount.length) {
+        if (this.$totalCount && this.$totalCount.length) {
             if (this.$totalCount[0].tagName === "INPUT") {
                 this.$totalCount.val(total);
             } else {
                 this.$totalCount.text(total);
-            }
-        } else if (this.totalCountEl) {
-            if (this.totalCountEl.tagName === "INPUT") {
-                this.totalCountEl.value = total;
-            } else {
-                this.totalCountEl.textContent = total;
             }
         }
     }
@@ -227,22 +138,12 @@ export class Paging {
      * Create and append button element
      */
     appendButton(button, clickHandler, title) {
-        let btn;
-        if (typeof $ !== "undefined") {
-            btn = button.clone();
-            if (title !== undefined) {
-                btn.attr("title", title);
-            }
-            btn.on("click", clickHandler);
-            $(this.el).append(btn);
-        } else {
-            btn = button.cloneNode(true);
-            if (title !== undefined) {
-                btn.setAttribute("title", title);
-            }
-            btn.addEventListener("click", clickHandler);
-            this.el.appendChild(btn);
+        let btn = button.clone();
+        if (title !== undefined) {
+            btn.attr("title", title);
         }
+        btn.on("click", clickHandler);
+        $(this.el).append(btn);
         return btn;
     }
 
@@ -253,7 +154,7 @@ export class Paging {
         const pagesToShow = 5;
         const total = this.collection.total;
 
-        console.log("Paging render", total, this.buttons);
+        log("Paging render", total, this.buttons);
         // Update total count
         this.updateTotalCount(total);
 
@@ -273,7 +174,7 @@ export class Paging {
         }
 
         this.pageSize = this.pageSize * 1;
-        console.log("Paging obj",this,this.pageSize,total)
+        log("Paging obj",this,this.pageSize,total)
         // Don't render if page size is larger than total
         if (this.pageSize > total) {
             return;
@@ -321,33 +222,17 @@ export class Paging {
             const pageOffset = i * this.pageSize;
             const isActive = Math.floor(this.iniOffset / this.pageSize) === i;
 
-            let pageBtn;
-            if (typeof $ !== "undefined") {
-                pageBtn = this.buttons.page.clone();
-                pageBtn.text(i + 1)
-                    .attr("title", pageOffset)
-                    .on("click", () => {
-                        this.collection.setOffset(pageOffset);
-                        this.collection.loadFromRemote();
-                    });
-                if (isActive) {
-                    pageBtn.addClass("active").off("click");
-                }
-                $(this.el).append(pageBtn);
-            } else {
-                pageBtn = this.buttons.page.cloneNode(true);
-                pageBtn.textContent = i + 1;
-                pageBtn.setAttribute("title", pageOffset);
-                if (isActive) {
-                    pageBtn.classList.add("active");
-                } else {
-                    pageBtn.addEventListener("click", () => {
-                        this.collection.setOffset(pageOffset);
-                        this.collection.loadFromRemote();
-                    });
-                }
-                this.el.appendChild(pageBtn);
+            let pageBtn = this.buttons.page.clone();
+            pageBtn.text(i + 1)
+                .attr("title", pageOffset)
+                .on("click", () => {
+                    this.collection.setOffset(pageOffset);
+                    this.collection.loadFromRemote();
+                });
+            if (isActive) {
+                pageBtn.addClass("active").off("click");
             }
+            $(this.el).append(pageBtn);
         }
 
         // Render next and last buttons
@@ -366,7 +251,7 @@ export class Paging {
 
             if (this.buttons.last) {
                 const lastPageOffset = (Math.ceil(total / this.pageSize) - 1) * this.pageSize;
-                console.log("last button", total, lastPageOffset,this.pageSize,this.offset);
+                log("last button", total, lastPageOffset,this.pageSize,this.offset);
                 if(lastPageOffset>this.iniOffset*1) {
                     this.appendButton(
                         this.buttons.last,
@@ -381,19 +266,42 @@ export class Paging {
         }
 
         // Update offset input value
-        let offsetInp;
-        if (typeof $ !== "undefined") {
-            offsetInp = $(this.collection.offsetinp);
-            if (offsetInp.length) {
-                offsetInp.val(this.iniOffset);
-            }
-        } else {
-            offsetInp = typeof this.collection.offsetinp === "string"
-                ? document.querySelector(this.collection.offsetinp)
-                : this.collection.offsetinp;
-            if (offsetInp) {
-                offsetInp.value = this.iniOffset;
-            }
+        let offsetInp = $(this.collection.offsetinp);
+        if (offsetInp.length) {
+            offsetInp.val(this.iniOffset);
         }
+    }
+
+    /**
+     * Destroy paging and clean up resources
+     */
+    destroy() {
+        // Remove event handlers from page size input
+        if (this.collection && this.collection.pagesizeinp) {
+            const pageSizeInp = $(this.collection.pagesizeinp);
+            pageSizeInp.off("change");
+        }
+
+        // Remove event handlers from offset input
+        if (this.collection && this.collection.offsetinp) {
+            const offsetInp = $(this.collection.offsetinp);
+            offsetInp.off("change");
+        }
+
+        // Clean up container
+        if (this.el) {
+            const $el = $(this.el);
+            $el.empty();
+            $el.off(); // Remove any remaining event handlers
+            $el.removeData();
+        }
+
+        // Clear references
+        this.collection = null;
+        this.el = null;
+        this.buttons = null;
+        this.$totalCount = null;
+
+        return this;
     }
 }

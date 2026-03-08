@@ -153,7 +153,7 @@ window.addEventListener('unhandledrejection', (event) => {
 ```javascript
 collection.loadFromRemote()
     .then((collection) => {
-        console.log('Success');
+        log('Success');
     })
     .catch((error) => {
         console.error('Error:', error);
@@ -170,7 +170,7 @@ collection.loadFromRemote()
 ```javascript
 item.loadFromRemote()
     .then((item) => {
-        console.log('Item loaded');
+        log('Item loaded');
     })
     .catch((error) => {
         console.error('Error:', error);
@@ -348,14 +348,14 @@ window.kviewsLogLevel = 3; // Maximum logging
 
 ```javascript
 // Collection
-console.log(collection.items);
-console.log(collection.url);
-console.log(collection.view);
+log(collection.items);
+log(collection.url);
+log(collection.view);
 
 // Item
-console.log(item.attributes);
-console.log(item.relationships);
-console.log(item.views);
+log(item.attributes);
+log(item.relationships);
+log(item.views);
 ```
 
 ### Check Event Listeners

@@ -1,4 +1,4 @@
-import { dbg, parseOptions, template } from './utils.js';
+import { dbg, log, parseOptions, template } from './utils.js';
 import { createURL } from './URL.js';
 import { Collection } from './Collection.js';
 import { Item } from './Item.js';
@@ -34,21 +34,7 @@ export class KViews {
 
         // Extract data attributes from HTML element
         let options = { dataBindings: {}, addontop: false };
-        
-        if (typeof $ !== "undefined") {
-            options = Object.assign(options, $(el).data());
-        } else {
-            // Fallback: read data-* attributes
-            if (el.dataset) {
-                Object.keys(el.dataset).forEach(key => {
-                    try {
-                        options[key] = JSON.parse(el.dataset[key]);
-                    } catch (e) {
-                        options[key] = el.dataset[key];
-                    }
-                });
-            }
-        }
+        options = Object.assign(options, $(el).data());
 
         // Assign options passed as parameter
         try {
@@ -62,22 +48,51 @@ export class KViews {
 
     /**
      * Helper: Check for existing instance and update if found
+     * 
+     * SAFE UPDATE CONTRACT:
+     * Only updates whitelisted safe configuration options.
+     * Does not overwrite internal runtime state (callbacks, items, views, etc.)
+     * 
+     * Safe to update:
+     * - url, updateUrl, deleteUrl, insertUrl (via setUrl)
+     * - template, type, pageSize, offset (configuration)
+     * - emptyview, filter, paging (view configuration)
+     * 
+     * NOT updated (internal state):
+     * - callbacks, items, views, storage, filtering, paging instances
+     * - length, total, iterator (runtime state)
      */
     static getOrUpdateInstance(el, options) {
-        let existingInstance;
-        if (typeof $ !== "undefined") {
-            existingInstance = $(el).data("instance");
-        } else {
-            existingInstance = el._instance;
-        }
+        let existingInstance = $(el).data("instance");
 
         if (existingInstance !== undefined) {
+            // Whitelist of safe options that can be updated after initialization
+            const safeUpdateOptions = [
+                'url', 'updateUrl', 'deleteUrl', 'insertUrl',
+                'template', 'type', 'pageSize', 'offset',
+                'emptyview', 'filter', 'paging', 'addontop',
+                'uievents', 'setAttrAsId', 'itemListeners', 'itemOn'
+            ];
+            
+            // Update URL if provided
             if (options.url) {
                 existingInstance.setUrl(options.url);
                 delete options.url;
             }
 
-            Object.assign(existingInstance, parseOptions(options));
+            // Parse options and filter to safe updates only
+            const parsedOptions = parseOptions(options);
+            const safeUpdates = {};
+            
+            safeUpdateOptions.forEach(key => {
+                if (parsedOptions.hasOwnProperty(key)) {
+                    safeUpdates[key] = parsedOptions[key];
+                }
+            });
+            
+            // Apply only safe updates
+            Object.assign(existingInstance, safeUpdates);
+            
             return existingInstance;
         }
 
@@ -89,17 +104,7 @@ export class KViews {
      */
     static processEmptyView(options) {
         if (options.hasOwnProperty("emptyview")) {
-            if (typeof $ !== "undefined") {
-                options.emptyview = $(options.emptyview).remove();
-            } else {
-                let emptyViewEl = typeof options.emptyview === "string" 
-                    ? document.querySelector(options.emptyview) 
-                    : options.emptyview;
-                if (emptyViewEl && emptyViewEl.parentNode) {
-                    emptyViewEl.parentNode.removeChild(emptyViewEl);
-                }
-                options.emptyview = emptyViewEl;
-            }
+            options.emptyview = $(options.emptyview).remove();
         }
     }
 
@@ -115,17 +120,13 @@ export class KViews {
         }
 
         // Store instance on element
-        if (typeof $ !== "undefined") {
-            $(el).data("instance", instance);
-        } else {
-            el._instance = instance;
-        }
+        $(el).data("instance", instance);
 
         dbg("instance", instance.url);
 
         // Auto-load if URL is provided
         if (instance.url && (typeof options.dontload === "undefined" || !options.dontload)) {
-            console.log("loadFromRemote now", options, instance);
+            log("loadFromRemote now", options, instance);
             instance.loadFromRemote();
         }
 
@@ -156,33 +157,22 @@ export class KViews {
         // Extract listeners
         let listeners = options.on;
         delete options.on;
+        
+        // Extract item listeners (keep in options, will be processed by Collection constructor)
+        // Options 'itemListeners' or 'itemOn' are both supported
         dbg("Create collection instance", options);
 
-        let templateTxt = null;
-        if (typeof $ !== "undefined") {
-            templateTxt = $(el).length ? $(el).html() : null;
-        } else {
-            templateTxt = el.innerHTML;
-        }
+        let templateTxt = $(el).length ? $(el).html() : null;
 
         // Handle template option
         if (options.template) {
-            if (typeof $ !== "undefined" && options.template instanceof jQuery) {
+            if (options.template instanceof jQuery) {
                 dbg("template is jQuery object", options.template, el);
                 let $tpl = $(options.template).clone().removeAttr("id");
                 templateTxt = $("<div>").append($tpl).html();
             } else if (typeof options.template === "string") {
                 dbg("template is raw text: can be either a jQuery selector or raw HTML", options.template, el);
-                if (typeof $ !== "undefined") {
-                    templateTxt = $("<div>").append($(options.template).clone().removeAttr("id")).html();
-                } else {
-                    let tplEl = document.querySelector(options.template);
-                    if (tplEl) {
-                        let div = document.createElement("div");
-                        div.appendChild(tplEl.cloneNode(true));
-                        templateTxt = div.innerHTML;
-                    }
-                }
+                templateTxt = $("<div>").append($(options.template).clone().removeAttr("id")).html();
             }
         }
 
@@ -201,30 +191,20 @@ export class KViews {
         let collectionConfig = {
             el: el,
             itemsContainer: options.hasOwnProperty("container") 
-                ? (typeof $ !== "undefined" ? $(options.container) : document.querySelector(options.container))
+                ? $(options.container)
                 : el,
             allowempty: options.disableempty !== true
         };
 
         options.view = new CollectionView(collectionConfig);
-        console.log("Collection constructor", options);
+        log("Collection constructor", options);
         let instance = new Collection(options);
 
         // Setup filtering
         if (options.hasOwnProperty("filter")) {
-            let filterEl;
-            if (typeof $ !== "undefined") {
-                filterEl = $(options.filter);
-                if (filterEl.length && filterEl.prop("tagName") === "FORM") {
-                    instance.filtering = new Filtering(filterEl, instance);
-                }
-            } else {
-                filterEl = typeof options.filter === "string" 
-                    ? document.querySelector(options.filter) 
-                    : options.filter;
-                if (filterEl && filterEl.tagName === "FORM") {
-                    instance.filtering = new Filtering(filterEl, instance);
-                }
+            let filterEl = $(options.filter);
+            if (filterEl.length && filterEl.prop("tagName") === "FORM") {
+                instance.filtering = new Filtering(filterEl, instance);
             }
         }
 
@@ -263,12 +243,8 @@ export class KViews {
         options.template = null;
         let templateTxt = null;
 
-        if (typeof $ !== "undefined") {
-            if ($(el).length) {
-                templateTxt = el[0] ? el[0].outerHTML : el.outerHTML;
-            }
-        } else {
-            templateTxt = el.outerHTML;
+        if ($(el).length) {
+            templateTxt = el[0] ? el[0].outerHTML : el.outerHTML;
         }
 
         if (templateTxt) {
@@ -282,7 +258,7 @@ export class KViews {
             options.template = template(templateTxt);
         }
 
-        let elId = typeof $ !== "undefined" ? $(el).attr("id") : el.id;
+        let elId = $(el).attr("id");
         let instance = new Item(options, data).bindView(new ItemView({
             template: options.template,
             el: el,

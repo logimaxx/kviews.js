@@ -33,13 +33,11 @@ if (typeof $ !== "undefined" && $.fn) {
         let resourcetype = "collection"; // default
         if (opts && opts.resourcetype) {
             resourcetype = opts.resourcetype;
-        } else if (typeof $ !== "undefined") {
+        } else {
             let dataResourcetype = $(el).data("resourcetype");
             if (dataResourcetype) {
                 resourcetype = dataResourcetype;
             }
-        } else if (el.dataset && el.dataset.resourcetype) {
-            resourcetype = el.dataset.resourcetype;
         }
 
         // Call appropriate method

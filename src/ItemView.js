@@ -23,49 +23,29 @@ export class ItemView {
         this.callbacks = {};
 
         // Handle jQuery or DOM element
-        if (params && (params.length || params.nodeName)) {
+        if (params && (params.length || (params.nodeName && !params.jquery))) {
             dbg("params is actually a jquery object or an html node", params);
-            let $el;
-            if (typeof $ !== "undefined") {
-                $el = $(params);
-                if ($el.data("view")) {
-                    return $el.data("view");
-                }
-
-                let tmp = $("<div>").append($el.clone(true));
-                let html = tmp.html()
-                    .replace(/&lt;%/gi, '<%')
-                    .replace(/&lt;/gi, '<')
-                    .replace(/%&gt;/gi, "%>")
-                    .replace(/&gt;/gi, '>')
-                    .replace(/&amp;/gi, "&");
-
-                params = {
-                    template: template(html),
-                    el: $el
-                };
-                if ($el.attr("id")) {
-                    params.id = $el.attr("id");
-                }
-                tmp.remove();
-            } else {
-                // Fallback for non-jQuery
-                let el = params.nodeName ? params : params[0];
-                let html = el.outerHTML
-                    .replace(/&lt;%/gi, '<%')
-                    .replace(/&lt;/gi, '<')
-                    .replace(/%&gt;/gi, "%>")
-                    .replace(/&gt;/gi, '>')
-                    .replace(/&amp;/gi, "&");
-
-                params = {
-                    template: template(html),
-                    el: el
-                };
-                if (el.id) {
-                    params.id = el.id;
-                }
+            let $el = $(params);
+            if ($el.data("view")) {
+                return $el.data("view");
             }
+
+            let tmp = $("<div>").append($el.clone(true));
+            let html = tmp.html()
+                .replace(/&lt;%/gi, '<%')
+                .replace(/&lt;/gi, '<')
+                .replace(/%&gt;/gi, "%>")
+                .replace(/&gt;/gi, '>')
+                .replace(/&amp;/gi, "&");
+
+            params = {
+                template: template(html),
+                el: $el
+            };
+            if ($el.attr("id")) {
+                params.id = $el.attr("id");
+            }
+            tmp.remove();
         }
 
         try {
@@ -117,37 +97,17 @@ export class ItemView {
 
         let el;
         try {
-            let data = this.item.attributes;
-            if (this.item.relationships) {
-                Object.assign(data, this.item.relationships);
-            }
-            let html = this.template(data);
-            if (typeof $ !== "undefined") {
-                el = $(html)
-                    .attr("data-type", "item")
-                    .attr("id", this.id)
-                    .data("view", this)
-                    .data("instance", this.item);
-            } else {
-                // Fallback without jQuery
-                let div = document.createElement("div");
-                div.innerHTML = html;
-                el = div.firstElementChild || div;
-                if (el) {
-                    el.setAttribute("data-type", "item");
-                    el.setAttribute("id", this.id);
-                    el._view = this;
-                    el._instance = this.item;
-                }
-            }
+            // Use getRenderContext() to get safe render data without mutating item state
+            const renderContext = this.item.getRenderContext();
+            let html = this.template(renderContext);
+            el = $(html)
+                .attr("data-type", "item")
+                .attr("id", this.id)
+                .data("view", this)
+                .data("instance", this.item);
         } catch (e) {
             dbg("Error create view from template", e, this.item);
-            if (typeof $ !== "undefined") {
-                el = $("<div>Could not render view: <strong>" + e.toString() + "</strong></div>");
-            } else {
-                el = document.createElement("div");
-                el.innerHTML = "Could not render view: <strong>" + e.toString() + "</strong>";
-            }
+            el = $("<div>Could not render view: <strong>" + e.toString() + "</strong></div>");
         }
         
         return el;
@@ -192,9 +152,6 @@ export class ItemView {
         }
         
         log("View item", this.item);
-        if (!renderedEl) {
-            return null;
-        }
         if (this.item && this.item.uievents) {
             this.item.uievents.forEach(action => {
                 log("UI event", action, renderedEl);
@@ -219,28 +176,14 @@ export class ItemView {
         // Replace already rendered element
         if (this.el) {
             let oldEl = this.el;
-            // Get the actual DOM element (handle both jQuery objects and DOM elements)
-            let oldElDom = (typeof $ !== "undefined" && oldEl.jquery) ? oldEl[0] : oldEl;
-            
-            if (typeof $ !== "undefined") {
-                // Use jQuery for manipulation
-                if (oldEl.jquery) {
-                    // oldEl is a jQuery object
-                    this.el = $(renderedEl).insertBefore(oldEl);
-                    oldEl.remove();
-                } else {
-                    // oldEl is a DOM element
-                    this.el = $(renderedEl).insertBefore(oldEl);
-                    $(oldEl).remove();
-                }
-            } else {
-                // Pure DOM manipulation
-                if (oldElDom && oldElDom.parentNode) {
-                    oldElDom.parentNode.insertBefore(renderedEl, oldElDom);
-                    oldElDom.parentNode.removeChild(oldElDom);
-                }
-                this.el = renderedEl;
+            // Normalize to jQuery
+            if (!oldEl.jquery) {
+                oldEl = $(oldEl);
             }
+            // Clean up event listeners from old element before removing
+            oldEl.off();
+            this.el = $(renderedEl).insertBefore(oldEl);
+            oldEl.remove();
             this.afterrender();
             return this;
         }
@@ -253,13 +196,7 @@ export class ItemView {
         }
 
         // Append to container
-        if (typeof $ !== "undefined") {
-            $(this.el).appendTo(this.container.el);
-        } else {
-            if (this.container.el) {
-                this.container.el.appendChild(this.el);
-            }
-        }
+        $(this.el).appendTo(this.container.el);
 
         return this;
     }
@@ -269,16 +206,8 @@ export class ItemView {
      */
     renderEmpty(returnView) {
         if (this.item && this.item.emptyview && this.el) {
-            if (typeof $ !== "undefined") {
-                let emptyView = $(this.item.emptyview).clone(true).css("display", "block");
-                $(this.el).replaceWith(emptyView);
-            } else {
-                let emptyView = this.item.emptyview.cloneNode(true);
-                emptyView.style.display = "block";
-                if (this.el.parentNode) {
-                    this.el.parentNode.replaceChild(emptyView, this.el);
-                }
-            }
+            let emptyView = $(this.item.emptyview).clone(true).css("display", "block");
+            $(this.el).replaceWith(emptyView);
         }
     }
 
@@ -287,26 +216,53 @@ export class ItemView {
      */
     remove(idx) {
         return new Promise((resolve) => {
-            if (this.item && this.item.collection && this.item.collection.onafterrender) {
-                this.item.collection.onafterrender(this.item.collection);
+            if (this.item && this.item.collection) {
+                this.item.collection._trigger('afterrender', this.item.collection);
             }
 
-            if (typeof $ !== "undefined" && this.el && this.el.jquery) {
-                $(this.el).fadeOut({
+            if (this.el) {
+                let $el = this.el.jquery ? this.el : $(this.el);
+                $el.fadeOut({
                     complete: () => {
-                        $(this.el).remove();
+                        $el.remove();
                         resolve();
                     }
                 });
-            } else if (this.el) {
-                // Fallback without jQuery animation
-                if (this.el.parentNode) {
-                    this.el.parentNode.removeChild(this.el);
-                }
-                resolve();
             } else {
                 resolve();
             }
         });
+    }
+
+    /**
+     * Destroy view and clean up resources
+     * 
+     * Removes event handlers, jQuery data, and DOM references
+     */
+    destroy() {
+        // Clean up event handlers from element
+        if (this.el) {
+            const $el = this.el.jquery ? this.el : $(this.el);
+            $el.off(); // Remove all jQuery event handlers
+            $el.removeData(); // Remove jQuery data
+        }
+
+        // Clean up callbacks
+        this.callbacks = {};
+
+        // Unbind from item
+        if (this.item) {
+            this.item.unbindView(this);
+        }
+
+        // Clear references
+        this.item = null;
+        this.container = null;
+        this.collectionView = null;
+        this.el = null;
+        this.template = null;
+        this.dataBindings = null;
+
+        return this;
     }
 }

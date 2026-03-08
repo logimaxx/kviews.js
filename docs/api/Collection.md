@@ -48,13 +48,37 @@ Filtering instance (if filter form is configured).
 #### `paging` (Paging|null)
 Paging instance (if pagination is configured). Set to `null` by default.
 
+#### `itemListeners` (Object|null)
+Event listeners to apply to all items created in this collection. Set to `null` by default.
+
+**Example:**
+```javascript
+const collection = KViews.createCollectionInstance('#posts', {
+    url: '/api/posts',
+    type: 'posts',
+    itemListeners: {
+        load: (item) => log('Item loaded:', item.id),
+        update: (item) => log('Item updated:', item.id)
+    }
+});
+```
+
+**Note:** You can also use `itemOn` as an alias for `itemListeners`.
+
 ### Methods
 
 #### `on(eventName, callback)`
 
 Register an event listener.
 
+**Parameters:**
+- `eventName` (String) - Event name
+- `callback` (Function) - Callback function
+
+**Returns:** Collection instance (for chaining)
+
 **Events:**
+- `beforeload` - Fired before loading data from remote
 - `load` - Fired when collection loads
 - `afterrender` - Fired after rendering
 - `update` - Fired when collection updates
@@ -62,8 +86,76 @@ Register an event listener.
 **Example:**
 ```javascript
 collection.on('load', (collection) => {
-    console.log('Collection loaded:', collection.items.length, 'items');
+    log('Collection loaded:', collection.items.length, 'items');
 });
+```
+
+#### `off(eventName, callback?)`
+
+Remove event listener(s).
+
+**Parameters:**
+- `eventName` (String) - Event name
+- `callback` (Function, optional) - Specific callback to remove. If not provided, removes all listeners for the event
+
+**Returns:** Collection instance (for chaining)
+
+**Example:**
+```javascript
+const handler = (collection) => { log('Loaded'); };
+collection.on('load', handler);
+// Later...
+collection.off('load', handler); // Remove specific listener
+collection.off('load'); // Remove all 'load' listeners
+collection.off(); // Remove all listeners
+```
+
+#### `once(eventName, callback)`
+
+Register a one-time event listener (fires once, then removes itself).
+
+**Parameters:**
+- `eventName` (String) - Event name
+- `callback` (Function) - Callback function
+
+**Returns:** Collection instance (for chaining)
+
+**Example:**
+```javascript
+collection.once('load', (collection) => {
+    log('First load completed');
+});
+```
+
+#### `emit(eventName, ...args)`
+
+Manually trigger an event.
+
+**Parameters:**
+- `eventName` (String) - Event name
+- `...args` - Arguments to pass to callbacks
+
+**Returns:** Collection instance (for chaining)
+
+**Example:**
+```javascript
+collection.emit('update', collection);
+```
+
+#### `hasListeners(eventName)`
+
+Check if an event has any listeners.
+
+**Parameters:**
+- `eventName` (String) - Event name
+
+**Returns:** Boolean - True if event has listeners
+
+**Example:**
+```javascript
+if (collection.hasListeners('load')) {
+    log('Collection has load listeners');
+}
 ```
 
 #### `setUrl(url)`
@@ -84,7 +176,7 @@ Load collection data from remote API.
 **Example:**
 ```javascript
 collection.loadFromRemote().then((collection) => {
-    console.log('Loaded', collection.items.length, 'items');
+    log('Loaded', collection.items.length, 'items');
 });
 ```
 
@@ -121,7 +213,7 @@ collection.append({
     title: 'New Post',
     content: 'Post content'
 }).then((item) => {
-    console.log('Item created:', item);
+    log('Item created:', item);
 });
 ```
 
@@ -172,4 +264,11 @@ Previous page
 
 #### `onupdate()`
 
-Trigger update event.
+Trigger the update event (called internally when collection is updated).
+
+**Returns:** Collection instance (for chaining)
+
+**Example:**
+```javascript
+collection.onupdate(); // Manually trigger update event
+```

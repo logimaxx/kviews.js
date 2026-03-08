@@ -1,4 +1,5 @@
 import { parseOptions } from './utils.js';
+import { KViewsHttpError, KViewsNetworkError } from './errors.js';
 
 /**
  * Storage class for HTTP operations
@@ -24,8 +25,18 @@ export class Storage {
             options.url = options.url.toString();
         }
         
-        if (typeof KViews !== "undefined" && KViews.baseUrl) {
-            options.url = KViews.baseUrl + options.url;
+        // Check for KViews baseUrl (global or imported)
+        let KViewsRef;
+        if (typeof global !== 'undefined' && global.KViews) {
+            KViewsRef = global.KViews;
+        } else if (typeof window !== 'undefined' && window.KViews) {
+            KViewsRef = window.KViews;
+        } else if (typeof KViews !== 'undefined') {
+            KViewsRef = KViews;
+        }
+        
+        if (KViewsRef && KViewsRef.baseUrl) {
+            options.url = KViewsRef.baseUrl + options.url;
         }
         options = Object.assign(
             Object.assign({}, this.defaultOptions),
@@ -64,6 +75,18 @@ export class Storage {
 
         // Make the request using Fetch API
         return fetch(options.url, fetchOptions)
+            .catch(fetchError => {
+                // Network/fetch failure (not HTTP error response)
+                // This is a network error, not an HTTP error
+                throw new KViewsNetworkError(
+                    fetchError instanceof Error ? fetchError.message : String(fetchError),
+                    {
+                        originalError: fetchError instanceof Error ? fetchError : new Error(String(fetchError)),
+                        url: options.url,
+                        options: options
+                    }
+                );
+            })
             .then(async response => {
                 // Create a response object that mimics jQuery's jqXHR structure
                 const jqXHR = {
@@ -101,12 +124,21 @@ export class Storage {
 
                 // Check if response is ok (status 200-299)
                 if (!response.ok) {
-                    throw {
-                        options: options,
-                        jqXHR: jqXHR,
-                        textStatus: 'error',
-                        errorThrown: new Error(`HTTP ${response.status}: ${response.statusText}`)
-                    };
+                    const error = new KViewsHttpError(
+                        `HTTP ${response.status}: ${response.statusText}`,
+                        {
+                            status: response.status,
+                            statusText: response.statusText,
+                            responseText: text,
+                            responseJSON: typeof data === 'object' ? data : null,
+                            jqXHR: jqXHR,
+                            options: options,
+                            errorThrown: new Error(`HTTP ${response.status}: ${response.statusText}`)
+                        }
+                    );
+                    // Add textStatus for backward compatibility
+                    error.textStatus = 'error';
+                    throw error;
                 }
 
                 // Successful response
@@ -117,7 +149,17 @@ export class Storage {
                 };
             })
             .catch(error => {
-                // Handle network errors or other fetch failures
+                // Handle errors from response processing or network failures
+                
+                // If already a KViews error, re-throw it
+                if (error instanceof KViewsHttpError || error instanceof KViewsNetworkError) {
+                    throw error;
+                }
+                
+                // If error was from fetch() itself (network error), it should have been caught above
+                // This catch handles errors from response processing
+                // For backward compatibility, wrap unexpected errors as HTTP errors
+                // but log that this is unusual
                 const jqXHR = {
                     status: 0,
                     statusText: 'error',
@@ -127,18 +169,21 @@ export class Storage {
                     getResponseHeader: () => null
                 };
 
-                // If error was thrown from response handling, re-throw it
-                if (error.jqXHR) {
-                    throw error;
-                }
-
-                // Network or other error
-                throw {
-                    options: options,
-                    jqXHR: jqXHR,
-                    textStatus: 'error',
-                    errorThrown: error instanceof Error ? error : new Error(String(error))
-                };
+                const httpError = new KViewsHttpError(
+                    error instanceof Error ? error.message : String(error),
+                    {
+                        status: 0,
+                        statusText: 'error',
+                        responseText: null,
+                        responseJSON: null,
+                        jqXHR: jqXHR,
+                        options: options,
+                        errorThrown: error instanceof Error ? error : new Error(String(error))
+                    }
+                );
+                // Add textStatus for backward compatibility
+                httpError.textStatus = 'error';
+                throw httpError;
             });
     }
 

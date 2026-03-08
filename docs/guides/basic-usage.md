@@ -143,7 +143,7 @@ const item = KViews.createItemInstance('#post-detail', {
 
     // Manual load
     collection.loadFromRemote().then((collection) => {
-        console.log('Loaded', collection.items.length, 'items');
+        log('Loaded', collection.items.length, 'items');
     });
 
     // Load from static data
@@ -166,7 +166,7 @@ const collection = KViews.createCollectionInstance('#posts', {
 
 // Manual load
 collection.loadFromRemote().then((collection) => {
-    console.log('Loaded', collection.items.length, 'items');
+    log('Loaded', collection.items.length, 'items');
 });
 
 // Load from static data
@@ -185,7 +185,7 @@ collection.append({
         content: 'Post content'
     }
 }).then((item) => {
-    console.log('Item created:', item.id);
+    log('Item created:', item.id);
 });
 ```
 
@@ -195,7 +195,7 @@ collection.append({
 item.update({
     title: 'Updated Title'
 }).then((item) => {
-    console.log('Item updated');
+    log('Item updated');
 });
 ```
 
@@ -203,7 +203,7 @@ item.update({
 
 ```javascript
 item.delete().then(() => {
-    console.log('Item deleted');
+    log('Item deleted');
 });
 ```
 
@@ -213,15 +213,15 @@ item.delete().then(() => {
 
 ```javascript
 collection.on('load', (collection) => {
-    console.log('Collection loaded:', collection.items.length);
+    log('Collection loaded:', collection.items.length);
 });
 
 collection.on('afterrender', (collection) => {
-    console.log('Collection rendered');
+    log('Collection rendered');
 });
 
 collection.on('update', (collection) => {
-    console.log('Collection updated');
+    log('Collection updated');
 });
 ```
 
@@ -229,15 +229,15 @@ collection.on('update', (collection) => {
 
 ```javascript
 item.on('load', (item) => {
-    console.log('Item loaded:', item.id);
+    log('Item loaded:', item.id);
 });
 
 item.on('update', (item) => {
-    console.log('Item updated:', item.id);
+    log('Item updated:', item.id);
 });
 
 item.on('remove', (item) => {
-    console.log('Item removed:', item.id);
+    log('Item removed:', item.id);
 });
 ```
 

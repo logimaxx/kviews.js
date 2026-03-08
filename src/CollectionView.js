@@ -26,10 +26,8 @@ export class CollectionView {
      */
     reset(force) {
         if (this.allowempty || force) {
-            if (typeof $ !== "undefined" && this.el) {
+            if (this.el) {
                 $(this.el).empty();
-            } else if (this.el) {
-                this.el.innerHTML = "";
             }
         }
         return this;
@@ -68,11 +66,28 @@ export class CollectionView {
         }
 
         this.reset();
-        if (typeof $ !== "undefined") {
-            $(this.el).append(this.collection.emptyview);
-        } else {
-            this.el.appendChild(this.collection.emptyview);
+        $(this.el).append(this.collection.emptyview);
+        return this;
+    }
+
+    /**
+     * Destroy view and clean up resources
+     */
+    destroy() {
+        // Clean up DOM
+        if (this.el) {
+            const $el = $(this.el);
+            $el.empty();
+            $el.removeData();
         }
+
+        // Clear references
+        this.collection = null;
+        this.el = null;
+        this.container = null;
+        this.itemsContainer = null;
+        this.dataBindings = null;
+
         return this;
     }
 }

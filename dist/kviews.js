@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-03-05T19:33:48.766Z
+ * Built: 2026-03-08T18:21:57.413Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -136,25 +136,10 @@ var KViews = (() => {
   };
   function getBoundObjects(el) {
     let db = {};
-    if (!el || typeof $ !== "undefined" && $(el).length === 0) {
+    if (!el || $(el).length === 0) {
       return db;
     }
-    let boundData;
-    if (typeof $ !== "undefined") {
-      boundData = $(el).data();
-    } else {
-      boundData = {};
-      if (el.dataset) {
-        Object.keys(el.dataset).forEach((key) => {
-          try {
-            db[key] = JSON.parse(el.dataset[key]);
-          } catch (e) {
-            db[key] = el.dataset[key];
-          }
-        });
-      }
-      return db;
-    }
+    let boundData = $(el).data();
     for (let key in boundData) {
       if (typeof boundData[key] === "object" && key !== "instance") {
         db[key] = boundData[key];
@@ -169,30 +154,104 @@ var KViews = (() => {
     throw new Error("Handlebars is required for template compilation");
   }
   function createOverlay() {
-    if (typeof $ !== "undefined") {
-      return $("<div>").text("Se incarca").addClass("komponent-overlay").attr("style", "background: silver; text-align: center;position:absolute; z-index:100000");
-    }
-    const overlay = document.createElement("div");
-    overlay.textContent = "Se incarca";
-    overlay.className = "komponent-overlay";
-    overlay.style.cssText = "background: silver; text-align: center;position:absolute; z-index:100000";
-    return overlay;
+    return $("<div>").text("Se incarca").addClass("komponent-overlay").attr("style", "background: silver; text-align: center;position:absolute; z-index:100000");
   }
+
+  // src/errors.js
+  var KViewsError = class extends Error {
+    constructor(message, options = {}) {
+      super(message);
+      this.name = "KViewsError";
+      this.options = options.options || {};
+      this.context = options.context || null;
+      if (Error.captureStackTrace) {
+        Error.captureStackTrace(this, this.constructor);
+      }
+    }
+  };
+  var KViewsHttpError = class extends KViewsError {
+    constructor(message, options = {}) {
+      super(message, options);
+      this.name = "KViewsHttpError";
+      this.status = options.status || 0;
+      this.statusText = options.statusText || "error";
+      this.responseText = options.responseText || null;
+      this.responseJSON = options.responseJSON || null;
+      this.jqXHR = options.jqXHR || null;
+      this.textStatus = options.textStatus || "error";
+      this.errorThrown = options.errorThrown || null;
+    }
+  };
+  var KViewsParseError = class extends KViewsError {
+    constructor(message, options = {}) {
+      super(message, options);
+      this.name = "KViewsParseError";
+      this.rawData = options.rawData || null;
+      this.parseStep = options.parseStep || null;
+    }
+  };
+  var KViewsUrlError = class extends KViewsError {
+    constructor(message, options = {}) {
+      super(message, options);
+      this.name = "KViewsUrlError";
+      this.url = options.url || null;
+    }
+  };
+  var KViewsNetworkError = class extends KViewsError {
+    constructor(message, options = {}) {
+      super(message, options);
+      this.name = "KViewsNetworkError";
+      this.originalError = options.originalError || null;
+      this.url = options.url || null;
+    }
+  };
 
   // src/URL.js
   var URL = class {
     constructor(url) {
       if (!url) {
-        throw new Error("URL is not provided");
+        throw new KViewsUrlError("URL is not provided", { url });
       }
       if (typeof url === "object" && url.hasOwnProperty("protocol")) {
         Object.assign(this, url);
+        if (this.parameters && !this.parameters.toString) {
+          this._addParametersToString();
+        }
         return;
       }
       if (url.constructor !== String) {
         dbg("URL is not a string", url);
-        throw "URL is not a string: " + url.toString();
+        throw new KViewsUrlError("URL is not a string: " + url.toString(), { url });
       }
+      const isAbsolute = /^[a-z]+:\/\//i.test(url);
+      if (isAbsolute && typeof window !== "undefined" && window.URL) {
+        try {
+          const standardUrl = new window.URL(url);
+          this.protocol = standardUrl.protocol ? standardUrl.protocol.replace(":", "") : null;
+          this.fqdn = standardUrl.hostname || null;
+          this.port = standardUrl.port || null;
+          this.path = standardUrl.pathname || null;
+          this.fragment = standardUrl.hash ? standardUrl.hash.replace("#", "") : null;
+          this.parameters = {};
+          if (standardUrl.search) {
+            const params = new URLSearchParams(standardUrl.search);
+            params.forEach((value, key) => {
+              this.parameters[key] = value;
+            });
+          }
+        } catch (e) {
+          this._parseRelativeUrl(url);
+        }
+      } else {
+        this._parseRelativeUrl(url);
+      }
+      this._addParametersToString();
+    }
+    /**
+     * Parse relative URL using regex fallback
+     * @private
+     */
+    _parseRelativeUrl(url) {
       let regExp = /^((?:([a-z]+):)([\/]{2,3})([\w\.\-\_]+)(?::(\d+))?)?(?:(\/?[^?#]*))?(?:\?([^#]*))?(?:#(.*))?$/i;
       let parts = regExp.exec(url);
       this.protocol = null;
@@ -214,35 +273,82 @@ var KViews = (() => {
         this.path = parts[6];
       }
       if (typeof parts[7] !== "undefined") {
-        let tmp = parts[7].split("&");
-        tmp.forEach(function(item) {
-          if (!item || item === "") {
-            return;
-          }
-          let eqPos = item.indexOf("=");
-          if (eqPos === -1) {
-            this.parameters[item] = "";
-          } else {
-            this.parameters[item.substr(0, eqPos)] = item.substr(eqPos + 1);
-          }
-        }.bind(this));
+        try {
+          const params = new URLSearchParams(parts[7]);
+          params.forEach((value, key) => {
+            this.parameters[key] = value;
+          });
+        } catch (e) {
+          let tmp = parts[7].split("&");
+          tmp.forEach((item) => {
+            if (!item || item === "") {
+              return;
+            }
+            let eqPos = item.indexOf("=");
+            if (eqPos === -1) {
+              this.parameters[item] = "";
+            } else {
+              this.parameters[item.substr(0, eqPos)] = decodeURIComponent(item.substr(eqPos + 1));
+            }
+          });
+        }
       }
       if (typeof parts[8] !== "undefined") {
         this.fragment = parts[8];
       }
-      this.parameters.toString = function() {
-        let paras = [];
-        for (let para in this) {
-          if (this.hasOwnProperty(para) && para !== "toString") {
-            paras.push(para + "=" + this[para]);
+    }
+    /**
+     * Add toString method to parameters object
+     * @private
+     */
+    _addParametersToString() {
+      if (!this.parameters.toString || this.parameters.toString === Object.prototype.toString) {
+        const self = this;
+        this.parameters.toString = function() {
+          if (typeof URLSearchParams !== "undefined") {
+            try {
+              const params = new URLSearchParams();
+              for (let para in this) {
+                if (this.hasOwnProperty(para) && para !== "toString") {
+                  params.append(para, String(this[para]));
+                }
+              }
+              return params.toString();
+            } catch (e) {
+            }
           }
-        }
-        return paras.join("&");
-      };
+          let paras = [];
+          for (let para in this) {
+            if (this.hasOwnProperty(para) && para !== "toString") {
+              const value = String(this[para]);
+              paras.push(encodeURIComponent(para) + "=" + encodeURIComponent(value));
+            }
+          }
+          return paras.join("&");
+        };
+      }
     }
     toString() {
       let str = "";
       if (this.protocol && this.fqdn) {
+        if (typeof window !== "undefined" && window.URL) {
+          try {
+            const baseUrl = this.protocol + "://" + this.fqdn + (this.port ? ":" + this.port : "");
+            const url = new window.URL(this.path || "/", baseUrl);
+            if (this.parameters && Object.keys(this.parameters).length > 0) {
+              Object.getOwnPropertyNames(this.parameters).forEach((key) => {
+                if (key !== "toString") {
+                  url.searchParams.set(key, this.parameters[key]);
+                }
+              });
+            }
+            if (this.fragment) {
+              url.hash = this.fragment;
+            }
+            return url.toString();
+          } catch (e) {
+          }
+        }
         str += this.protocol + "://" + this.fqdn;
         if (this.port) {
           str += ":" + this.port;
@@ -282,8 +388,16 @@ var KViews = (() => {
       if (options.url && typeof options.url === "object" && options.url.toString) {
         options.url = options.url.toString();
       }
-      if (typeof KViews !== "undefined" && KViews.baseUrl) {
-        options.url = KViews.baseUrl + options.url;
+      let KViewsRef;
+      if (typeof global !== "undefined" && global.KViews) {
+        KViewsRef = global.KViews;
+      } else if (typeof window !== "undefined" && window.KViews) {
+        KViewsRef = window.KViews;
+      } else if (typeof KViews !== "undefined") {
+        KViewsRef = KViews;
+      }
+      if (KViewsRef && KViewsRef.baseUrl) {
+        options.url = KViewsRef.baseUrl + options.url;
       }
       options = Object.assign(
         Object.assign({}, this.defaultOptions),
@@ -308,7 +422,16 @@ var KViews = (() => {
       if (options.data && ["POST", "PUT", "PATCH"].includes(fetchOptions.method)) {
         fetchOptions.body = options.data;
       }
-      return fetch(options.url, fetchOptions).then(async (response) => {
+      return fetch(options.url, fetchOptions).catch((fetchError) => {
+        throw new KViewsNetworkError(
+          fetchError instanceof Error ? fetchError.message : String(fetchError),
+          {
+            originalError: fetchError instanceof Error ? fetchError : new Error(String(fetchError)),
+            url: options.url,
+            options
+          }
+        );
+      }).then(async (response) => {
         const jqXHR = {
           status: response.status,
           statusText: response.statusText,
@@ -334,12 +457,20 @@ var KViews = (() => {
         jqXHR.responseText = text;
         jqXHR.responseJSON = typeof data === "object" ? data : null;
         if (!response.ok) {
-          throw {
-            options,
-            jqXHR,
-            textStatus: "error",
-            errorThrown: new Error(`HTTP ${response.status}: ${response.statusText}`)
-          };
+          const error2 = new KViewsHttpError(
+            `HTTP ${response.status}: ${response.statusText}`,
+            {
+              status: response.status,
+              statusText: response.statusText,
+              responseText: text,
+              responseJSON: typeof data === "object" ? data : null,
+              jqXHR,
+              options,
+              errorThrown: new Error(`HTTP ${response.status}: ${response.statusText}`)
+            }
+          );
+          error2.textStatus = "error";
+          throw error2;
         }
         return {
           data,
@@ -347,6 +478,9 @@ var KViews = (() => {
           jqXHR
         };
       }).catch((error2) => {
+        if (error2 instanceof KViewsHttpError || error2 instanceof KViewsNetworkError) {
+          throw error2;
+        }
         const jqXHR = {
           status: 0,
           statusText: "error",
@@ -355,15 +489,20 @@ var KViews = (() => {
           getAllResponseHeaders: () => "",
           getResponseHeader: () => null
         };
-        if (error2.jqXHR) {
-          throw error2;
-        }
-        throw {
-          options,
-          jqXHR,
-          textStatus: "error",
-          errorThrown: error2 instanceof Error ? error2 : new Error(String(error2))
-        };
+        const httpError = new KViewsHttpError(
+          error2 instanceof Error ? error2.message : String(error2),
+          {
+            status: 0,
+            statusText: "error",
+            responseText: null,
+            responseJSON: null,
+            jqXHR,
+            options,
+            errorThrown: error2 instanceof Error ? error2 : new Error(String(error2))
+          }
+        );
+        httpError.textStatus = "error";
+        throw httpError;
       });
     }
     /**
@@ -420,210 +559,209 @@ var KViews = (() => {
   };
 
   // src/dataParser.js
-  var itemsArr = {};
-  function flattenDoc(doc) {
-    let arr = [];
-    if (doc.hasOwnProperty("data") && doc.data !== null) {
-      if (doc.data.constructor === Array) {
-        arr = doc.data;
-      } else {
-        arr.push(doc.data);
-      }
+  function getIncludedResources(doc) {
+    if (!doc || typeof doc !== "object") {
+      return [];
     }
-    if (doc.hasOwnProperty("includes")) {
-      arr = arr.concat(doc.includes);
+    const includedData = doc.hasOwnProperty("included") ? doc.included : doc.hasOwnProperty("includes") ? doc.includes : null;
+    if (!includedData) {
+      return [];
     }
-    arr.forEach(function(item) {
-      if (!itemsArr.hasOwnProperty(item.type + "/" + item.id)) {
-        itemsArr[item.type + "/" + item.id] = item;
-      }
-    });
-    return arr;
+    if (!Array.isArray(includedData)) {
+      return [];
+    }
+    return includedData;
   }
-  function buildDb(data) {
-    let db = {
-      __get: function(resName, keyId) {
-        if (!resName) {
-          return null;
-        }
-        if (resName.constructor === Object && resName.hasOwnProperty("id") && resName.hasOwnProperty("type")) {
-          keyId = resName.id;
-          resName = resName.type;
-        }
-        if (!this.hasOwnProperty(resName)) {
-          return null;
-        }
-        if (!this[resName].hasOwnProperty(keyId)) {
-          return null;
-        }
-        return this[resName][keyId];
-      },
-      __add: function(resName, keyId, data2) {
-        if (!resName) {
-          return null;
-        }
-        if (resName.constructor === Object && resName.hasOwnProperty("id") && resName.hasOwnProperty("type")) {
-          keyId = resName.id;
-          resName = resName.type;
-          if (resName.hasOwnProperty("data")) {
-            data2 = resName.data;
-          }
-        }
-        if (!this.hasOwnProperty(resName)) {
-          this[resName] = {};
-        }
-        if (!this[resName].hasOwnProperty(keyId)) {
-          this[resName][keyId] = {
-            id: keyId,
-            type: resName
-          };
-        }
-        if (data2) {
-          this[resName][keyId] = data2;
-        }
-        return this[resName][keyId];
-      }
-    };
-    if (data.hasOwnProperty("data")) {
-      db = deepmerge(db, parseDataProperty(data.data));
+  function buildResourceIndex(doc) {
+    const index = /* @__PURE__ */ new Map();
+    if (!doc || typeof doc !== "object") {
+      return index;
     }
-    if (data.hasOwnProperty("includes")) {
-      db = deepmerge(db, parseIncludesProperty(data.includes));
-    }
-    Object.getOwnPropertyNames(db).forEach(function(resName) {
-      if (resName === "__get" || resName === "__add") return;
-      Object.getOwnPropertyNames(db[resName]).forEach(function(keyId) {
-        if (!db[resName][keyId]) {
-          return;
-        }
-        if (!db[resName][keyId].hasOwnProperty("relationships")) {
-          return;
-        }
-        Object.getOwnPropertyNames(db[resName][keyId].relationships).forEach(function(relName) {
-          if (!db[resName][keyId].relationships[relName].hasOwnProperty("data") || !db[resName][keyId].relationships[relName].data) {
-            db[resName][keyId].relationships[relName] = null;
-            return;
-          }
-          let relTmp = db[resName][keyId].relationships[relName].data;
-          if (relTmp.constructor === Object) {
-            let tmp = db.__get(relTmp);
-            if (!tmp) {
-              tmp = db.__add(relTmp);
-            }
-            db[resName][keyId].relationships[relName] = tmp;
-          }
-          if (relTmp.constructor === Array) {
-            db[resName][keyId].relationships[relName] = [];
-            for (let i = 0; i < relTmp.length; i++) {
-              let tmp = db.__get(relTmp[i].type, relTmp[i].id);
-              db[resName][keyId].relationships[relName].push(tmp ? tmp : relTmp[i]);
-            }
-          }
-        });
-      });
-    });
-    function parseDataProperty(data2) {
-      let db2 = {};
-      if (!data2) {
-        return db2;
-      }
-      if (data2.constructor === Object) {
-        data2 = [data2];
-      }
-      if (data2.constructor !== Array) {
-        return db2;
-      }
-      return addItems2Db(data2);
-    }
-    function parseIncludesProperty(data2) {
-      let db2 = {};
-      if (!data2 || data2.constructor !== Array) {
-        return db2;
-      }
-      return addItems2Db(data2);
-    }
-    function addItems2Db(items) {
-      let db2 = {};
-      items.forEach(function(item) {
-        if (!item.hasOwnProperty("attributes") && !item.hasOwnProperty("relationships")) {
-          return;
-        }
-        if (!db2.hasOwnProperty(item.type)) {
-          db2[item.type] = {};
-        }
-        db2[item.type][item.id] = item;
-      });
-      return db2;
-    }
-    return db;
-  }
-  function parseItemData(data, db) {
-    let obj = {};
-    let jsonApiObj = data.data;
-    if (data.hasOwnProperty("links") && data.links && data.links.hasOwnProperty("self")) {
-      obj.url = createURL(data.links.self);
-    }
-    let jsonApiItem = data.hasOwnProperty("data") ? data.data : data;
-    let tmp = db.__get(jsonApiItem);
-    if (tmp === null) {
-      tmp = {};
-    }
-    obj = deepmerge(obj, tmp);
-    if (!obj.relationships) {
-      return obj;
-    }
-    Object.getOwnPropertyNames(obj.relationships).forEach(function(relName) {
-      if (obj.relationships[relName] === null) {
+    function indexResource(resource) {
+      if (!resource || typeof resource !== "object") {
         return;
       }
-      let relUrl = null;
-      if (jsonApiObj.relationships[relName].hasOwnProperty("links") && jsonApiObj.relationships[relName].links.hasOwnProperty("related")) {
-        relUrl = jsonApiObj.relationships[relName].links.related;
+      if (!resource.type || !resource.id) {
+        return;
       }
-      let relData = obj.relationships[relName];
-    });
-    return obj;
+      const key = `${resource.type}/${resource.id}`;
+      if (!index.has(key)) {
+        index.set(key, resource);
+      }
+    }
+    if (doc.data) {
+      if (Array.isArray(doc.data)) {
+        doc.data.forEach(indexResource);
+      } else if (typeof doc.data === "object") {
+        indexResource(doc.data);
+      }
+    }
+    const included = getIncludedResources(doc);
+    included.forEach(indexResource);
+    return index;
   }
-  function parseDataForInsertOrUpdate(itemData) {
-    if (itemData === null) {
+  function getResourceFromIndex(typeOrRef, id, resourceIndex) {
+    let type, resourceId;
+    if (typeof typeOrRef === "object" && typeOrRef !== null) {
+      type = typeOrRef.type;
+      resourceId = typeOrRef.id;
+    } else {
+      type = typeOrRef;
+      resourceId = id;
+    }
+    if (!type || !resourceId) {
       return null;
     }
-    if (typeof itemData !== "object") {
-      throw new Error("Invalid item data: " + itemData);
+    const key = `${type}/${resourceId}`;
+    return resourceIndex.get(key) || null;
+  }
+  function hydrateResource(resource, resourceIndex, visited = /* @__PURE__ */ new Set()) {
+    if (!resource || typeof resource !== "object") {
+      return resource;
     }
-    if (itemData.constructor === Array || itemData.hasOwnProperty("items") && itemData.hasOwnProperty("length")) {
+    if (!resource.relationships) {
+      return resource;
+    }
+    const resourceKey = resource.type && resource.id ? `${resource.type}/${resource.id}` : null;
+    if (resourceKey && visited.has(resourceKey)) {
+      return resource;
+    }
+    if (resourceKey) {
+      visited.add(resourceKey);
+    }
+    Object.keys(resource.relationships).forEach((relName) => {
+      const rel = resource.relationships[relName];
+      if (rel === null) {
+        return;
+      }
+      if (rel.data !== void 0) {
+        if (rel.data === null) {
+          resource.relationships[relName] = null;
+        } else if (Array.isArray(rel.data)) {
+          resource.relationships[relName] = rel.data.map((ref) => {
+            const hydrated = getResourceFromIndex(ref, null, resourceIndex);
+            if (hydrated) {
+              return hydrateResource(
+                hydrated,
+                // Use same object instance from index
+                resourceIndex,
+                new Set(visited)
+                // New visited set for each branch
+              );
+            }
+            return ref;
+          }).filter((r) => r !== null);
+        } else if (typeof rel.data === "object" && rel.data.type && rel.data.id) {
+          const hydrated = getResourceFromIndex(rel.data, null, resourceIndex);
+          if (hydrated) {
+            resource.relationships[relName] = hydrateResource(
+              hydrated,
+              // Use same object instance from index
+              resourceIndex,
+              new Set(visited)
+              // New visited set for each branch
+            );
+          } else {
+            resource.relationships[relName] = rel.data;
+          }
+        } else {
+          resource.relationships[relName] = rel.data;
+        }
+      } else {
+        resource.relationships[relName] = rel;
+      }
+    });
+    return resource;
+  }
+  function hydrateDocumentData(doc) {
+    if (!doc || typeof doc !== "object") {
+      throw new KViewsParseError("Invalid document: must be an object");
+    }
+    const resourceIndex = buildResourceIndex(doc);
+    if (!doc.data) {
+      return null;
+    }
+    const data = doc.data;
+    if (Array.isArray(data)) {
+      data.forEach((resource) => hydrateResource(resource, resourceIndex));
+      return data;
+    } else if (typeof data === "object") {
+      return hydrateResource(data, resourceIndex);
+    }
+    return data;
+  }
+  function parseItemData(data, options = {}) {
+    let hydratedResource;
+    let doc = data;
+    if (data && typeof data === "object" && data.type && data.id && !data.data) {
+      hydratedResource = data;
+    } else if (data && data.data) {
+      doc = data;
+      hydratedResource = hydrateDocumentData(doc);
+    } else {
+      hydratedResource = data;
+    }
+    if (!hydratedResource || typeof hydratedResource !== "object") {
+      throw new KViewsParseError("Invalid item data: must be an object");
+    }
+    if (doc && doc.links && doc.links.self && !hydratedResource.url) {
+      hydratedResource.url = createURL(doc.links.self);
+    }
+    return hydratedResource;
+  }
+  function parseCollectionData(doc) {
+    if (!doc || typeof doc !== "object") {
+      return [];
+    }
+    const hydratedData = hydrateDocumentData(doc);
+    if (!hydratedData) {
+      return [];
+    }
+    if (!Array.isArray(hydratedData)) {
+      return [hydratedData];
+    }
+    return hydratedData;
+  }
+  function parseDataForInsertOrUpdate(itemData2) {
+    if (itemData2 === null) {
+      return null;
+    }
+    if (typeof itemData2 !== "object") {
+      throw new Error("Invalid item data: " + itemData2);
+    }
+    if (itemData2.constructor === Array || itemData2.hasOwnProperty("items") && itemData2.hasOwnProperty("length")) {
       let resource2 = [];
-      itemData.forEach(function(item) {
+      itemData2.forEach(function(item) {
         resource2.push(parseDataForInsertOrUpdate(item));
       });
       return resource2;
     }
-    if (itemData.constructor !== Object) {
+    if (itemData2.constructor !== Object) {
       throw new Error("Invalid case");
     }
     let resource = {};
-    if (!itemData.hasOwnProperty("attributes")) {
+    if (!itemData2.hasOwnProperty("attributes")) {
       let tmp = { attributes: {} };
-      if (itemData.hasOwnProperty("type")) {
-        tmp.type = itemData.type;
+      if (itemData2.hasOwnProperty("type")) {
+        tmp.type = itemData2.type;
       }
-      Object.assign(tmp.attributes, itemData);
-      itemData = tmp;
+      Object.assign(tmp.attributes, itemData2);
+      itemData2 = tmp;
     }
-    Object.getOwnPropertyNames(itemData.attributes).forEach(function(attr) {
-      if (itemData.attributes[attr] && typeof itemData.attributes[attr] === "object") {
+    Object.getOwnPropertyNames(itemData2.attributes).forEach(function(attr) {
+      if (itemData2.attributes[attr] && typeof itemData2.attributes[attr] === "object") {
         if (!resource.relationships) {
           resource.relationships = {};
         }
         resource.relationships[attr] = {
-          data: parseDataForInsertOrUpdate(itemData.attributes[attr])
+          data: parseDataForInsertOrUpdate(itemData2.attributes[attr])
         };
         return;
       }
       if (!resource.attributes) {
         resource.attributes = {};
       }
-      resource.attributes[attr] = itemData.attributes[attr];
+      resource.attributes[attr] = itemData2.attributes[attr];
     });
     return resource;
   }
@@ -644,35 +782,22 @@ var KViews = (() => {
       this.id = uid();
       this.isView = true;
       this.callbacks = {};
-      if (params && (params.length || params.nodeName)) {
+      if (params && (params.length || params.nodeName && !params.jquery)) {
         dbg("params is actually a jquery object or an html node", params);
-        let $el;
-        if (typeof $ !== "undefined") {
-          $el = $(params);
-          if ($el.data("view")) {
-            return $el.data("view");
-          }
-          let tmp = $("<div>").append($el.clone(true));
-          let html = tmp.html().replace(/&lt;%/gi, "<%").replace(/&lt;/gi, "<").replace(/%&gt;/gi, "%>").replace(/&gt;/gi, ">").replace(/&amp;/gi, "&");
-          params = {
-            template: template(html),
-            el: $el
-          };
-          if ($el.attr("id")) {
-            params.id = $el.attr("id");
-          }
-          tmp.remove();
-        } else {
-          let el = params.nodeName ? params : params[0];
-          let html = el.outerHTML.replace(/&lt;%/gi, "<%").replace(/&lt;/gi, "<").replace(/%&gt;/gi, "%>").replace(/&gt;/gi, ">").replace(/&amp;/gi, "&");
-          params = {
-            template: template(html),
-            el
-          };
-          if (el.id) {
-            params.id = el.id;
-          }
+        let $el = $(params);
+        if ($el.data("view")) {
+          return $el.data("view");
         }
+        let tmp = $("<div>").append($el.clone(true));
+        let html = tmp.html().replace(/&lt;%/gi, "<%").replace(/&lt;/gi, "<").replace(/%&gt;/gi, "%>").replace(/&gt;/gi, ">").replace(/&amp;/gi, "&");
+        params = {
+          template: template(html),
+          el: $el
+        };
+        if ($el.attr("id")) {
+          params.id = $el.attr("id");
+        }
+        tmp.remove();
       }
       try {
         params = parseOptions(params);
@@ -716,32 +841,12 @@ var KViews = (() => {
       }
       let el;
       try {
-        let data = this.item.attributes;
-        if (this.item.relationships) {
-          Object.assign(data, this.item.relationships);
-        }
-        let html = this.template(data);
-        if (typeof $ !== "undefined") {
-          el = $(html).attr("data-type", "item").attr("id", this.id).data("view", this).data("instance", this.item);
-        } else {
-          let div = document.createElement("div");
-          div.innerHTML = html;
-          el = div.firstElementChild || div;
-          if (el) {
-            el.setAttribute("data-type", "item");
-            el.setAttribute("id", this.id);
-            el._view = this;
-            el._instance = this.item;
-          }
-        }
+        const renderContext = this.item.getRenderContext();
+        let html = this.template(renderContext);
+        el = $(html).attr("data-type", "item").attr("id", this.id).data("view", this).data("instance", this.item);
       } catch (e) {
         dbg("Error create view from template", e, this.item);
-        if (typeof $ !== "undefined") {
-          el = $("<div>Could not render view: <strong>" + e.toString() + "</strong></div>");
-        } else {
-          el = document.createElement("div");
-          el.innerHTML = "Could not render view: <strong>" + e.toString() + "</strong>";
-        }
+        el = $("<div>Could not render view: <strong>" + e.toString() + "</strong></div>");
       }
       return el;
     }
@@ -764,9 +869,6 @@ var KViews = (() => {
         return null;
       }
       log("View item", this.item);
-      if (!renderedEl) {
-        return null;
-      }
       if (this.item && this.item.uievents) {
         this.item.uievents.forEach((action) => {
           log("UI event", action, renderedEl);
@@ -787,22 +889,12 @@ var KViews = (() => {
       }
       if (this.el) {
         let oldEl = this.el;
-        let oldElDom = typeof $ !== "undefined" && oldEl.jquery ? oldEl[0] : oldEl;
-        if (typeof $ !== "undefined") {
-          if (oldEl.jquery) {
-            this.el = $(renderedEl).insertBefore(oldEl);
-            oldEl.remove();
-          } else {
-            this.el = $(renderedEl).insertBefore(oldEl);
-            $(oldEl).remove();
-          }
-        } else {
-          if (oldElDom && oldElDom.parentNode) {
-            oldElDom.parentNode.insertBefore(renderedEl, oldElDom);
-            oldElDom.parentNode.removeChild(oldElDom);
-          }
-          this.el = renderedEl;
+        if (!oldEl.jquery) {
+          oldEl = $(oldEl);
         }
+        oldEl.off();
+        this.el = $(renderedEl).insertBefore(oldEl);
+        oldEl.remove();
         this.afterrender();
         return this;
       }
@@ -811,13 +903,7 @@ var KViews = (() => {
       if (!this.container) {
         return this;
       }
-      if (typeof $ !== "undefined") {
-        $(this.el).appendTo(this.container.el);
-      } else {
-        if (this.container.el) {
-          this.container.el.appendChild(this.el);
-        }
-      }
+      $(this.el).appendTo(this.container.el);
       return this;
     }
     /**
@@ -825,16 +911,8 @@ var KViews = (() => {
      */
     renderEmpty(returnView) {
       if (this.item && this.item.emptyview && this.el) {
-        if (typeof $ !== "undefined") {
-          let emptyView = $(this.item.emptyview).clone(true).css("display", "block");
-          $(this.el).replaceWith(emptyView);
-        } else {
-          let emptyView = this.item.emptyview.cloneNode(true);
-          emptyView.style.display = "block";
-          if (this.el.parentNode) {
-            this.el.parentNode.replaceChild(emptyView, this.el);
-          }
-        }
+        let emptyView = $(this.item.emptyview).clone(true).css("display", "block");
+        $(this.el).replaceWith(emptyView);
       }
     }
     /**
@@ -842,25 +920,44 @@ var KViews = (() => {
      */
     remove(idx) {
       return new Promise((resolve) => {
-        if (this.item && this.item.collection && this.item.collection.onafterrender) {
-          this.item.collection.onafterrender(this.item.collection);
+        if (this.item && this.item.collection) {
+          this.item.collection._trigger("afterrender", this.item.collection);
         }
-        if (typeof $ !== "undefined" && this.el && this.el.jquery) {
-          $(this.el).fadeOut({
+        if (this.el) {
+          let $el = this.el.jquery ? this.el : $(this.el);
+          $el.fadeOut({
             complete: () => {
-              $(this.el).remove();
+              $el.remove();
               resolve();
             }
           });
-        } else if (this.el) {
-          if (this.el.parentNode) {
-            this.el.parentNode.removeChild(this.el);
-          }
-          resolve();
         } else {
           resolve();
         }
       });
+    }
+    /**
+     * Destroy view and clean up resources
+     * 
+     * Removes event handlers, jQuery data, and DOM references
+     */
+    destroy() {
+      if (this.el) {
+        const $el = this.el.jquery ? this.el : $(this.el);
+        $el.off();
+        $el.removeData();
+      }
+      this.callbacks = {};
+      if (this.item) {
+        this.item.unbindView(this);
+      }
+      this.item = null;
+      this.container = null;
+      this.collectionView = null;
+      this.el = null;
+      this.template = null;
+      this.dataBindings = null;
+      return this;
     }
   };
 
@@ -882,7 +979,6 @@ var KViews = (() => {
       this.emptyview = null;
       this.uievents = [];
       this.callbacks = {};
-      this.onafterrender = null;
       try {
         Object.assign(this, parseOptions(options));
       } catch (e) {
@@ -890,10 +986,8 @@ var KViews = (() => {
       }
       this.storage = options.storage || new Storage();
       let render = false;
-      if (this.url) {
-        this.setUrl(this.url);
-      } else if (data) {
-        console.log("Loading data", data);
+      if (data) {
+        log("Loading data", data);
         try {
           this.loadFromData(data);
           render = true;
@@ -901,11 +995,19 @@ var KViews = (() => {
           console.error("Error loading data", e);
         }
       }
+      if (this.url) {
+        this.setUrl(this.url);
+      }
       this.views.forEach((view) => {
         view.item = this;
       });
+      if (options.itemListeners && typeof options.itemListeners === "object") {
+        Object.getOwnPropertyNames(options.itemListeners).forEach((eventName) => {
+          this.on(eventName, options.itemListeners[eventName]);
+        });
+      }
       if (render) {
-        console.log("Rendering data", data);
+        log("Rendering data", data);
         this.render();
       }
     }
@@ -917,6 +1019,79 @@ var KViews = (() => {
         this.callbacks[eventName] = [];
       }
       this.callbacks[eventName].push(cb);
+      return this;
+    }
+    /**
+     * Remove event listener(s)
+     * @param {string} eventName - Event name
+     * @param {Function} [cb] - Optional callback to remove. If not provided, removes all listeners for the event
+     * @returns {Item} This instance for chaining
+     */
+    off(eventName, cb) {
+      if (!eventName) {
+        this.callbacks = {};
+        return this;
+      }
+      if (!this.callbacks[eventName]) {
+        return this;
+      }
+      if (cb) {
+        const index = this.callbacks[eventName].indexOf(cb);
+        if (index > -1) {
+          this.callbacks[eventName].splice(index, 1);
+        }
+        if (this.callbacks[eventName].length === 0) {
+          delete this.callbacks[eventName];
+        }
+      } else {
+        delete this.callbacks[eventName];
+      }
+      return this;
+    }
+    /**
+     * Register a one-time event listener
+     * @param {string} eventName - Event name
+     * @param {Function} cb - Callback function
+     * @returns {Item} This instance for chaining
+     */
+    once(eventName, cb) {
+      const wrapper = (...args) => {
+        cb(...args);
+        this.off(eventName, wrapper);
+      };
+      return this.on(eventName, wrapper);
+    }
+    /**
+     * Check if event has listeners
+     * @param {string} eventName - Event name
+     * @returns {boolean} True if event has listeners
+     */
+    hasListeners(eventName) {
+      return this.callbacks[eventName] && Array.isArray(this.callbacks[eventName]) && this.callbacks[eventName].length > 0;
+    }
+    /**
+     * Trigger an event (internal helper)
+     * @private
+     * @param {string} eventName - Event name
+     * @param {...any} args - Arguments to pass to callbacks
+     */
+    _trigger(eventName, ...args) {
+      if (this.callbacks[eventName] && Array.isArray(this.callbacks[eventName])) {
+        this.callbacks[eventName].forEach((cb) => {
+          if (typeof cb === "function") {
+            cb(...args);
+          }
+        });
+      }
+    }
+    /**
+     * Emit/trigger an event manually
+     * @param {string} eventName - Event name
+     * @param {...any} args - Arguments to pass to callbacks
+     * @returns {Item} This instance for chaining
+     */
+    emit(eventName, ...args) {
+      this._trigger(eventName, ...args);
       return this;
     }
     /**
@@ -939,55 +1114,79 @@ var KViews = (() => {
       return this;
     }
     /**
-     * Load from remote data source
+     * Load from remote
+     * 
+     * Canonical method for loading item data from API
      */
     loadFromRemote() {
-      return this.load_from_data_source();
-    }
-    refresh() {
-      return this.loadFromRemote();
-    }
-    reload() {
-      return this.loadFromRemote();
+      return this.loadFromDataSource();
     }
     /**
-     * Load item data from data source storage
+     * Load from data source (internal implementation)
+     * @private
      */
-    load_from_data_source() {
+    loadFromDataSource() {
       let loaders = [];
       const overlay = createOverlay();
       this.views.forEach((itemView) => {
-        if (typeof $ !== "undefined" && itemView.el) {
+        if (itemView.el) {
           let $el = $(itemView.el);
           let loader = overlay.clone();
-          if (typeof loader.insertBefore === "function") {
-            loader.insertBefore(itemView.el).width($el.width()).height($el.height());
-          }
+          loader.insertBefore(itemView.el).width($el.width()).height($el.height());
           loaders.push(loader);
         }
       });
       return new Promise((resolve, reject) => {
         if (!this.url) {
-          throw new Error("No valid URL provided");
+          reject(new Error("No valid URL provided"));
+          return;
         }
+        this._trigger("beforeload", this);
         let urlString = this.url.toString ? this.url.toString() : this.url;
         this.storage.read(this, urlString, {}).then((resp) => {
           let data = resp.data;
           this.loadFromJSONAPIDoc(data).render();
+          this._trigger("load", this);
           loaders.forEach((loader) => {
-            if (typeof loader.remove === "function") {
-              loader.remove();
-            } else if (loader.parentNode) {
-              loader.parentNode.removeChild(loader);
-            }
+            loader.remove();
           });
           resolve(this);
         }).catch((error2) => {
           dbg("fail to load item resource", this.url, error2);
-          this.fail(error2.jqXHR || error2, error2.textStatus, error2.errorThrown);
-          reject(error2);
+          if (error2 instanceof Error && error2.jqXHR) {
+            this.fail(error2.jqXHR, error2.textStatus || "error", error2.errorThrown || error2);
+            reject(error2);
+          } else if (error2 && error2.jqXHR) {
+            this.fail(error2.jqXHR, error2.textStatus, error2.errorThrown);
+            reject(error2);
+          } else {
+            this.fail(null, "error", error2);
+            reject(error2);
+          }
         });
       });
+    }
+    /**
+     * @deprecated Use loadFromRemote() instead
+     * Alias for backward compatibility
+     */
+    refresh() {
+      return this.loadFromRemote();
+    }
+    /**
+     * @deprecated Use loadFromRemote() instead
+     * Alias for backward compatibility
+     */
+    reload() {
+      return this.loadFromRemote();
+    }
+    /**
+     * @deprecated Use loadFromRemote() instead
+     * Internal method, use loadFromRemote() for public API
+     * @private
+     */
+    load_from_data_source() {
+      return this.loadFromDataSource();
     }
     /**
      * Unbind a view from this item
@@ -1007,14 +1206,9 @@ var KViews = (() => {
      * Bind a view to this item
      */
     bindView(view, returnView) {
-      let $el;
-      if (typeof $ !== "undefined") {
-        $el = $(view);
-        if ($el.length === 0) {
-          throw new Error("Nothing to bind to: empty view element");
-        }
-      } else if (!view || !view.nodeName) {
-        throw new Error("Nothing to bind to: invalid view element");
+      let $el = $(view);
+      if ($el.length === 0) {
+        throw new Error("Nothing to bind to: empty view element");
       }
       if (!(view instanceof ItemView)) {
         view = new ItemView(view);
@@ -1045,8 +1239,11 @@ var KViews = (() => {
         dbg("Invalid configuration: resource type is item but server response is collection", data);
         throw new Error("Invalid configuration: resource type is item but server response is collection");
       }
-      Object.assign(this, parseItemData(data, buildDb(data)));
-      this.url = createURL(this.url);
+      const parsedData = parseItemData(data);
+      Object.assign(this, parsedData);
+      if (this.url) {
+        this.url = createURL(this.url);
+      }
       return this;
     }
     /**
@@ -1080,6 +1277,7 @@ var KViews = (() => {
         }
       }
       Object.assign(this, data);
+      this._trigger("load", this);
       if (render) {
         this.render();
       }
@@ -1097,50 +1295,192 @@ var KViews = (() => {
       });
     }
     /**
-     * Convert to JSON
+     * Get render context - safe view model for templates
+     * 
+     * RENDER CONTEXT CONTRACT:
+     * 
+     * Returns a template-friendly object where:
+     * - Attributes are exposed directly (e.g., {{title}} not {{attributes.title}})
+     * - Relationships are flattened to plain objects with attributes, id, type
+     * - All data is shallow-copied to prevent mutation of internal state
+     * 
+     * Relationship representation strategy:
+     * - To-one: { id, type, ...attributes } (flattened plain object)
+     * - To-many: Array of { id, type, ...attributes } (array of flattened objects)
+     * - Null relationships: null
+     * 
+     * This ensures Handlebars templates can access data directly:
+     *   {{title}} - item attribute
+     *   {{author.name}} - relationship attribute
+     *   {{#each tags}}{{name}}{{/each}} - relationship array
+     * 
+     * @returns {Object} Render context object safe for template rendering
+     */
+    getRenderContext() {
+      const context = Object.assign({}, this.attributes);
+      if (this.relationships) {
+        Object.getOwnPropertyNames(this.relationships).forEach((relName) => {
+          const rel = this.relationships[relName];
+          if (rel === null) {
+            context[relName] = null;
+          } else if (Array.isArray(rel)) {
+            context[relName] = rel.map((item) => {
+              if (item && typeof item === "object" && item.attributes) {
+                return Object.assign({}, item.attributes, {
+                  id: item.id,
+                  type: item.type
+                });
+              }
+              return item;
+            });
+          } else if (rel && typeof rel === "object" && rel.attributes) {
+            context[relName] = Object.assign({}, rel.attributes, {
+              id: rel.id,
+              type: rel.type
+            });
+          } else {
+            context[relName] = typeof rel === "object" && rel !== null ? Object.assign({}, rel) : rel;
+          }
+        });
+      }
+      if (this.id !== null && this.id !== void 0) {
+        context.id = this.id;
+      }
+      if (this.type) {
+        context.type = this.type;
+      }
+      return context;
+    }
+    /**
+     * Convert to JSON:API format
+     * 
+     * Serializes item to JSON:API format for API requests.
+     * This method is side-effect free - it does not mutate this.relationships.
+     * 
+     * Runtime relationships (hydrated objects) are converted to JSON:API
+     * relationship format: { data: { type, id } } or { data: [{ type, id }, ...] }
+     * 
+     * @returns {Object} JSON:API formatted object
      */
     toJSON() {
       let json = {
         type: this.type,
-        attributes: this.attributes
+        attributes: this.attributes || {}
       };
       if (this.id) {
         json.id = this.id;
       }
-      if (this.attributes) {
-        json.attributes = this.attributes;
-      }
-      if (!this.hasOwnProperty("relationships")) {
-        return json;
-      }
-      json.relationships = {};
-      for (let relName in this.relationships) {
-        if (!this.relationships.hasOwnProperty(relName)) {
+      if (this.relationships && Object.keys(this.relationships).length > 0) {
+        json.relationships = {};
+        for (let relName in this.relationships) {
+          if (!this.relationships.hasOwnProperty(relName)) {
+            continue;
+          }
+          const rel = this.relationships[relName];
+          if (rel === null) {
+            json.relationships[relName] = { data: null };
+            continue;
+          }
+          if (rel && typeof rel === "object" && !Array.isArray(rel)) {
+            if (rel.type && rel.id) {
+              json.relationships[relName] = {
+                data: {
+                  type: rel.type,
+                  id: rel.id
+                }
+              };
+            } else if (rel.hasOwnProperty("toJSON")) {
+              json.relationships[relName] = {
+                data: rel.toJSON()
+              };
+            } else {
+              continue;
+            }
+            continue;
+          }
+          if (Array.isArray(rel)) {
+            json.relationships[relName] = {
+              data: rel.map((item) => {
+                if (item && typeof item === "object") {
+                  if (item.type && item.id) {
+                    return {
+                      type: item.type,
+                      id: item.id
+                    };
+                  } else if (item.hasOwnProperty("toJSON")) {
+                    return item.toJSON();
+                  }
+                }
+                return item;
+              })
+            };
+            continue;
+          }
           continue;
-        }
-        json.relationships[relName] = {
-          data: null
-        };
-        if (this.relationships[relName] === null) {
-          continue;
-        }
-        if (this.relationships[relName].constructor === Object) {
-          json.relationships[relName].data = this.relationships[relName].hasOwnProperty("toJSON") ? this.relationships[relName].toJSON() : this.relationships[relName];
-          continue;
-        }
-        if (this.relationships[relName].constructor !== Array) {
-          delete this.relationships[relName];
-          delete json.relationships[relName];
-          continue;
-        }
-        json.relationships[relName].data = [];
-        for (let i = 0; i < this.relationships[relName].length; i++) {
-          let tmp = this.relationships[relName][i].hasOwnProperty("toJSON") ? this.relationships[relName][i].toJSON() : this.relationships[relName][i];
-          json.relationships[relName].data.push(tmp);
         }
       }
       dbg("item.json", json);
       return json;
+    }
+    /**
+     * Serialize a single relationship to JSON:API wire format
+     * 
+     * Converts runtime relationship state (hydrated objects, arrays, null) to
+     * JSON:API relationship format for wire transmission.
+     * 
+     * IMPORTANT: This is a serialization function - it does NOT mutate runtime state.
+     * Runtime relationships remain as hydrated objects/arrays/null.
+     * 
+     * @param {Object|Array|null} rel - Runtime relationship value
+     * @returns {Object} JSON:API relationship format: { data: { type, id } } or { data: [{ type, id }, ...] } or { data: null }
+     */
+    _serializeRelationshipToWireFormat(rel) {
+      if (rel === null) {
+        return { data: null };
+      }
+      if (rel && typeof rel === "object" && !Array.isArray(rel)) {
+        if (rel.type && rel.id) {
+          return {
+            data: {
+              type: rel.type,
+              id: rel.id
+            }
+          };
+        } else if (rel.hasOwnProperty("toJSON")) {
+          const json = rel.toJSON();
+          return {
+            data: {
+              type: json.type,
+              id: json.id
+            }
+          };
+        } else {
+          return { data: null };
+        }
+      }
+      if (Array.isArray(rel)) {
+        return {
+          data: rel.map((item) => {
+            if (item && typeof item === "object") {
+              if (item.type && item.id) {
+                return {
+                  type: item.type,
+                  id: item.id
+                };
+              } else if (item.hasOwnProperty("toJSON")) {
+                const json = item.toJSON();
+                return {
+                  type: json.type,
+                  id: json.id
+                };
+              }
+            }
+            return item;
+          }).filter((item) => item && item.type && item.id)
+          // Filter out invalid items
+        };
+      }
+      return { data: null };
     }
     /**
      * Sync pending operations
@@ -1157,6 +1497,12 @@ var KViews = (() => {
     }
     /**
      * Perform update operation
+     * 
+     * Builds PATCH payload with changed attributes and relationships.
+     * 
+     * IMPORTANT: Runtime relationship state (hydrated objects/arrays/null) is serialized
+     * to JSON:API wire format ({ data: { type, id } }) for transmission. Runtime state
+     * remains unchanged - this is a serialization layer, not a state mutation.
      */
     perform_update(opts) {
       let options = {
@@ -1179,7 +1525,8 @@ var KViews = (() => {
         });
         Object.getOwnPropertyNames(this.relationships).forEach((relaName) => {
           if (this.shadow && this.shadow.relationships[relaName] !== this.relationships[relaName]) {
-            toUpdate.relationships[relaName] = this.relationships[relaName];
+            const runtimeRel = this.relationships[relaName];
+            toUpdate.relationships[relaName] = this._serializeRelationshipToWireFormat(runtimeRel);
           }
         });
         if (!Object.getOwnPropertyNames(toUpdate.attributes).length && !Object.getOwnPropertyNames(toUpdate.relationships).length) {
@@ -1195,7 +1542,7 @@ var KViews = (() => {
         }
         let updateUrlString = this.updateUrl.toString ? this.updateUrl.toString() : this.updateUrl;
         this.storage.update(this, updateUrlString, {}, patchData).then((resp) => {
-          let newData = parseItemData(resp.data, buildDb(resp.data));
+          let newData = parseItemData(resp.data);
           Object.assign(this, newData);
           this.shadow = null;
           if (options.rerender) {
@@ -1203,16 +1550,20 @@ var KViews = (() => {
               view.render();
             });
           }
-          if (this.callbacks.update) {
-            this.callbacks.update.forEach((cb) => new Promise(() => cb(this)));
-          }
+          this._trigger("update", this);
           if (this.collection) {
             this.collection.onupdate();
           }
           resolve(this);
-        }).catch((xhr) => {
-          dbg("Update NOK", this.updateUrl, patchData, xhr);
-          reject(xhr);
+        }).catch((error2) => {
+          dbg("Update NOK", this.updateUrl, patchData, error2);
+          if (error2 instanceof Error && error2.jqXHR) {
+            reject(error2);
+          } else if (error2.jqXHR) {
+            reject(error2);
+          } else {
+            reject(error2 instanceof Error ? error2 : new Error(String(error2)));
+          }
         });
       });
     }
@@ -1237,24 +1588,37 @@ var KViews = (() => {
       }
       const updateRelation = (rel, data) => {
         dbg("update relation", rel, data);
-        if (rel && rel.hasOwnProperty("length")) {
-          dbg("to fix");
+        if (data === null) {
+          return null;
+        }
+        if (rel && Array.isArray(rel)) {
+          if (Array.isArray(data)) {
+            return data.map((item) => {
+              if (typeof item === "object" && item !== null) {
+                return new _Item().loadFromData(item);
+              }
+              return item;
+            });
+          }
+          dbg("to fix: array relationship update");
           return rel;
         }
-        if (typeof data === "object") {
+        if (typeof data === "object" && data !== null) {
           dbg("Update 1:1 relation");
           let item = new _Item().loadFromData(data);
           dbg("relation", item);
           return item;
         }
-        if (rel && rel.id && rel.id === data) {
-          return rel;
-        }
-        return {
-          data: {
-            id: data
+        if (typeof data === "string" || typeof data === "number") {
+          if (rel && rel.id && (rel.id === data || String(rel.id) === String(data))) {
+            return rel;
           }
-        };
+          return {
+            id: String(data),
+            type: rel && rel.type ? rel.type : null
+          };
+        }
+        return rel;
       };
       Object.getOwnPropertyNames(this.relationships).forEach((relName) => {
         if (!updateData.hasOwnProperty(relName)) {
@@ -1311,9 +1675,7 @@ var KViews = (() => {
           ps.push(collection.removeItem(this));
         }
         Promise.all(ps).then(() => {
-          if (this.callbacks["remove"]) {
-            this.callbacks["remove"].forEach((cb) => new Promise(() => cb(this)));
-          }
+          this._trigger("remove", this);
           if (collection) {
             collection.onupdate();
           }
@@ -1333,8 +1695,13 @@ var KViews = (() => {
       if (ops && ops.constructor === Object) {
         Object.assign(deleteOps, ops);
       }
-      await this.storage.delete(this, this.deleteUrl.toString(), {});
-      await this.remove();
+      try {
+        await this.storage.delete(this, this.deleteUrl.toString(), {});
+        await this.remove();
+      } catch (error2) {
+        dbg("Error deleting item", error2);
+        throw error2;
+      }
     }
     /**
      * Render item
@@ -1352,6 +1719,38 @@ var KViews = (() => {
           view.render(false, addontop);
         }
       });
+      this._trigger("afterrender", this);
+      return this;
+    }
+    /**
+     * Destroy item and clean up resources
+     * 
+     * Removes event handlers, views, and clears references.
+     * Safe to call multiple times.
+     * 
+     * @returns {Item} This instance for chaining
+     */
+    destroy() {
+      const viewsToDestroy = this.views ? [...this.views] : [];
+      viewsToDestroy.forEach((view) => {
+        if (view && typeof view.destroy === "function") {
+          view.destroy();
+        }
+      });
+      this.views = [];
+      this.callbacks = {};
+      if (this.collection) {
+        this.collection = null;
+      }
+      this.storage = null;
+      this.url = null;
+      this.updateUrl = null;
+      this.deleteUrl = null;
+      this.attributes = {};
+      this.relationships = {};
+      this.shadow = null;
+      this.views = [];
+      return this;
     }
   };
 
@@ -1376,10 +1775,8 @@ var KViews = (() => {
      */
     reset(force) {
       if (this.allowempty || force) {
-        if (typeof $ !== "undefined" && this.el) {
+        if (this.el) {
           $(this.el).empty();
-        } else if (this.el) {
-          this.el.innerHTML = "";
         }
       }
       return this;
@@ -1411,11 +1808,23 @@ var KViews = (() => {
         return this;
       }
       this.reset();
-      if (typeof $ !== "undefined") {
-        $(this.el).append(this.collection.emptyview);
-      } else {
-        this.el.appendChild(this.collection.emptyview);
+      $(this.el).append(this.collection.emptyview);
+      return this;
+    }
+    /**
+     * Destroy view and clean up resources
+     */
+    destroy() {
+      if (this.el) {
+        const $el = $(this.el);
+        $el.empty();
+        $el.removeData();
       }
+      this.collection = null;
+      this.el = null;
+      this.container = null;
+      this.itemsContainer = null;
+      this.dataBindings = null;
       return this;
     }
   };
@@ -1424,11 +1833,7 @@ var KViews = (() => {
   var Paging = class {
     constructor(pagingEl, collection) {
       this.collection = collection;
-      if (typeof $ !== "undefined") {
-        this.el = $(pagingEl);
-      } else {
-        this.el = pagingEl.nodeName ? pagingEl : pagingEl[0];
-      }
+      this.el = $(pagingEl);
       this.collection.paging = this;
       this.iniOffset = (this.collection.offset ? this.collection.offset : 0) * 1;
       this.defaultPageSize = 20;
@@ -1436,7 +1841,7 @@ var KViews = (() => {
       this.setupPageSizeInput();
       this.setupOffsetInput();
       this.buttons = this.extractButtons();
-      console.log("buttons", this.buttons);
+      log("buttons", this.buttons);
       this.setupTotalCount();
       this.render();
     }
@@ -1444,54 +1849,28 @@ var KViews = (() => {
      * Setup page size input handler
      */
     setupPageSizeInput() {
-      let pageSizeInp;
-      if (typeof $ !== "undefined") {
-        pageSizeInp = $(this.collection.pagesizeinp);
-        if (pageSizeInp.length) {
-          this.collection.setPageSize(pageSizeInp.val());
-          pageSizeInp.off("change").on("change", () => {
-            if (this.collection.setPageSize(pageSizeInp.val())) {
-              this.collection.loadFromRemote();
-            }
-          });
-        }
-      } else {
-        pageSizeInp = typeof this.collection.pagesizeinp === "string" ? document.querySelector(this.collection.pagesizeinp) : this.collection.pagesizeinp;
-        if (pageSizeInp) {
-          this.collection.setPageSize(pageSizeInp.value);
-          pageSizeInp.addEventListener("change", () => {
-            if (this.collection.setPageSize(pageSizeInp.value)) {
-              this.collection.loadFromRemote();
-            }
-          });
-        }
+      let pageSizeInp = $(this.collection.pagesizeinp);
+      if (pageSizeInp.length) {
+        this.collection.setPageSize(pageSizeInp.val());
+        pageSizeInp.off("change").on("change", () => {
+          if (this.collection.setPageSize(pageSizeInp.val())) {
+            this.collection.loadFromRemote();
+          }
+        });
       }
     }
     /**
      * Setup offset input handler
      */
     setupOffsetInput() {
-      let offsetInp;
-      if (typeof $ !== "undefined") {
-        offsetInp = $(this.collection.offsetinp);
-        if (offsetInp.length) {
-          this.collection.setOffset(offsetInp.val());
-          offsetInp.off("change").on("change", () => {
-            if (this.collection.setOffset(offsetInp.val())) {
-              this.collection.loadFromRemote();
-            }
-          });
-        }
-      } else {
-        offsetInp = typeof this.collection.offsetinp === "string" ? document.querySelector(this.collection.offsetinp) : this.collection.offsetinp;
-        if (offsetInp) {
-          this.collection.setOffset(offsetInp.value);
-          offsetInp.addEventListener("change", () => {
-            if (this.collection.setOffset(offsetInp.value)) {
-              this.collection.loadFromRemote();
-            }
-          });
-        }
+      let offsetInp = $(this.collection.offsetinp);
+      if (offsetInp.length) {
+        this.collection.setOffset(offsetInp.val());
+        offsetInp.off("change").on("change", () => {
+          if (this.collection.setOffset(offsetInp.val())) {
+            this.collection.loadFromRemote();
+          }
+        });
       }
     }
     /**
@@ -1499,58 +1878,30 @@ var KViews = (() => {
      */
     extractButtons() {
       let buttons = {};
-      if (typeof $ !== "undefined") {
-        const pageBtn = $(this.el).find("[name=page]");
-        if (pageBtn.length) {
-          buttons.page = pageBtn.clone();
-          pageBtn.remove();
-        }
-        const prevBtn = $(this.el).find("[name=prev]");
-        if (prevBtn.length) {
-          buttons.prev = prevBtn.clone();
-          prevBtn.remove();
-        }
-        const nextBtn = $(this.el).find("[name=next]");
-        if (nextBtn.length) {
-          buttons.next = nextBtn.clone();
-          nextBtn.remove();
-        }
-        const firstBtn = $(this.el).find("[name=first]");
-        if (firstBtn.length) {
-          buttons.first = firstBtn.clone();
-          firstBtn.remove();
-        }
-        const lastBtn = $(this.el).find("[name=last]");
-        if (lastBtn.length) {
-          buttons.last = lastBtn.clone();
-          lastBtn.remove();
-        }
-      } else {
-        const pageBtn = this.el.querySelector("[name=page]");
-        if (pageBtn) {
-          buttons.page = pageBtn.cloneNode(true);
-          pageBtn.parentNode.removeChild(pageBtn);
-        }
-        const prevBtn = this.el.querySelector("[name=prev]");
-        if (prevBtn) {
-          buttons.prev = prevBtn.cloneNode(true);
-          prevBtn.parentNode.removeChild(prevBtn);
-        }
-        const nextBtn = this.el.querySelector("[name=next]");
-        if (nextBtn) {
-          buttons.next = nextBtn.cloneNode(true);
-          nextBtn.parentNode.removeChild(nextBtn);
-        }
-        const firstBtn = this.el.querySelector("[name=first]");
-        if (firstBtn) {
-          buttons.first = firstBtn.cloneNode(true);
-          firstBtn.parentNode.removeChild(firstBtn);
-        }
-        const lastBtn = this.el.querySelector("[name=last]");
-        if (lastBtn) {
-          buttons.last = lastBtn.cloneNode(true);
-          lastBtn.parentNode.removeChild(lastBtn);
-        }
+      const pageBtn = $(this.el).find("[name=page]");
+      if (pageBtn.length) {
+        buttons.page = pageBtn.clone();
+        pageBtn.remove();
+      }
+      const prevBtn = $(this.el).find("[name=prev]");
+      if (prevBtn.length) {
+        buttons.prev = prevBtn.clone();
+        prevBtn.remove();
+      }
+      const nextBtn = $(this.el).find("[name=next]");
+      if (nextBtn.length) {
+        buttons.next = nextBtn.clone();
+        nextBtn.remove();
+      }
+      const firstBtn = $(this.el).find("[name=first]");
+      if (firstBtn.length) {
+        buttons.first = firstBtn.clone();
+        firstBtn.remove();
+      }
+      const lastBtn = $(this.el).find("[name=last]");
+      if (lastBtn.length) {
+        buttons.last = lastBtn.clone();
+        lastBtn.remove();
       }
       return buttons;
     }
@@ -1558,42 +1909,24 @@ var KViews = (() => {
      * Setup total count element
      */
     setupTotalCount() {
-      if (typeof $ !== "undefined") {
-        this.$totalCount = $(this.collection.totalrecscount);
-      } else {
-        this.totalCountEl = typeof this.collection.totalrecscount === "string" ? document.querySelector(this.collection.totalrecscount) : this.collection.totalrecscount;
-      }
+      this.$totalCount = $(this.collection.totalrecscount);
     }
     /**
      * Clear container
      */
     clearContainer() {
-      if (typeof $ !== "undefined") {
-        $(this.el).empty();
-        $(this.el).find("[data-type=pages]").empty();
-      } else {
-        this.el.innerHTML = "";
-        const pagesContainer = this.el.querySelector("[data-type=pages]");
-        if (pagesContainer) {
-          pagesContainer.innerHTML = "";
-        }
-      }
+      $(this.el).empty();
+      $(this.el).find("[data-type=pages]").empty();
     }
     /**
      * Update total count display
      */
     updateTotalCount(total) {
-      if (typeof $ !== "undefined" && this.$totalCount && this.$totalCount.length) {
+      if (this.$totalCount && this.$totalCount.length) {
         if (this.$totalCount[0].tagName === "INPUT") {
           this.$totalCount.val(total);
         } else {
           this.$totalCount.text(total);
-        }
-      } else if (this.totalCountEl) {
-        if (this.totalCountEl.tagName === "INPUT") {
-          this.totalCountEl.value = total;
-        } else {
-          this.totalCountEl.textContent = total;
         }
       }
     }
@@ -1601,22 +1934,12 @@ var KViews = (() => {
      * Create and append button element
      */
     appendButton(button, clickHandler, title) {
-      let btn;
-      if (typeof $ !== "undefined") {
-        btn = button.clone();
-        if (title !== void 0) {
-          btn.attr("title", title);
-        }
-        btn.on("click", clickHandler);
-        $(this.el).append(btn);
-      } else {
-        btn = button.cloneNode(true);
-        if (title !== void 0) {
-          btn.setAttribute("title", title);
-        }
-        btn.addEventListener("click", clickHandler);
-        this.el.appendChild(btn);
+      let btn = button.clone();
+      if (title !== void 0) {
+        btn.attr("title", title);
       }
+      btn.on("click", clickHandler);
+      $(this.el).append(btn);
       return btn;
     }
     /**
@@ -1625,7 +1948,7 @@ var KViews = (() => {
     render() {
       const pagesToShow = 5;
       const total = this.collection.total;
-      console.log("Paging render", total, this.buttons);
+      log("Paging render", total, this.buttons);
       this.updateTotalCount(total);
       this.clearContainer();
       this.iniOffset = this.collection.offset * 1;
@@ -1637,7 +1960,7 @@ var KViews = (() => {
         this.pageSize = this.defaultPageSize;
       }
       this.pageSize = this.pageSize * 1;
-      console.log("Paging obj", this, this.pageSize, total);
+      log("Paging obj", this, this.pageSize, total);
       if (this.pageSize > total) {
         return;
       }
@@ -1673,31 +1996,15 @@ var KViews = (() => {
         }
         const pageOffset = i * this.pageSize;
         const isActive = Math.floor(this.iniOffset / this.pageSize) === i;
-        let pageBtn;
-        if (typeof $ !== "undefined") {
-          pageBtn = this.buttons.page.clone();
-          pageBtn.text(i + 1).attr("title", pageOffset).on("click", () => {
-            this.collection.setOffset(pageOffset);
-            this.collection.loadFromRemote();
-          });
-          if (isActive) {
-            pageBtn.addClass("active").off("click");
-          }
-          $(this.el).append(pageBtn);
-        } else {
-          pageBtn = this.buttons.page.cloneNode(true);
-          pageBtn.textContent = i + 1;
-          pageBtn.setAttribute("title", pageOffset);
-          if (isActive) {
-            pageBtn.classList.add("active");
-          } else {
-            pageBtn.addEventListener("click", () => {
-              this.collection.setOffset(pageOffset);
-              this.collection.loadFromRemote();
-            });
-          }
-          this.el.appendChild(pageBtn);
+        let pageBtn = this.buttons.page.clone();
+        pageBtn.text(i + 1).attr("title", pageOffset).on("click", () => {
+          this.collection.setOffset(pageOffset);
+          this.collection.loadFromRemote();
+        });
+        if (isActive) {
+          pageBtn.addClass("active").off("click");
         }
+        $(this.el).append(pageBtn);
       }
       const nxtOffset = this.iniOffset + this.pageSize;
       if (this.iniOffset + this.pageSize < total) {
@@ -1713,7 +2020,7 @@ var KViews = (() => {
         }
         if (this.buttons.last) {
           const lastPageOffset = (Math.ceil(total / this.pageSize) - 1) * this.pageSize;
-          console.log("last button", total, lastPageOffset, this.pageSize, this.offset);
+          log("last button", total, lastPageOffset, this.pageSize, this.offset);
           if (lastPageOffset > this.iniOffset * 1) {
             this.appendButton(
               this.buttons.last,
@@ -1726,47 +2033,40 @@ var KViews = (() => {
           }
         }
       }
-      let offsetInp;
-      if (typeof $ !== "undefined") {
-        offsetInp = $(this.collection.offsetinp);
-        if (offsetInp.length) {
-          offsetInp.val(this.iniOffset);
-        }
-      } else {
-        offsetInp = typeof this.collection.offsetinp === "string" ? document.querySelector(this.collection.offsetinp) : this.collection.offsetinp;
-        if (offsetInp) {
-          offsetInp.value = this.iniOffset;
-        }
+      let offsetInp = $(this.collection.offsetinp);
+      if (offsetInp.length) {
+        offsetInp.val(this.iniOffset);
       }
+    }
+    /**
+     * Destroy paging and clean up resources
+     */
+    destroy() {
+      if (this.collection && this.collection.pagesizeinp) {
+        const pageSizeInp = $(this.collection.pagesizeinp);
+        pageSizeInp.off("change");
+      }
+      if (this.collection && this.collection.offsetinp) {
+        const offsetInp = $(this.collection.offsetinp);
+        offsetInp.off("change");
+      }
+      if (this.el) {
+        const $el = $(this.el);
+        $el.empty();
+        $el.off();
+        $el.removeData();
+      }
+      this.collection = null;
+      this.el = null;
+      this.buttons = null;
+      this.$totalCount = null;
+      return this;
     }
   };
 
   // src/Collection.js
   var Collection = class {
     constructor(opts = {}) {
-      let allowedOptions = [
-        "url",
-        "deleteUrl",
-        "insertUrl",
-        "updateUrl",
-        "view",
-        "offset",
-        "pageSize",
-        "template",
-        "type",
-        "emptyview",
-        "filter",
-        "pagesize",
-        "onafterrender",
-        "onbeforeload",
-        "resourcetype",
-        "dataBindings",
-        "addontop",
-        "template",
-        "uievents",
-        "paging",
-        "pagesizeinp"
-      ];
       this.url = null;
       this.deleteUrl = null;
       this.insertUrl = null;
@@ -1780,13 +2080,11 @@ var KViews = (() => {
       this.navtype = "page";
       this.type = null;
       this.emptyview = null;
-      this.length = 0;
       this.items = [];
       this.addontop = false;
       this.uievents = [];
-      this.onafterrender = null;
-      this.onbeforeload = null;
       this.setAttrAsId = null;
+      this.itemListeners = null;
       this.callbacks = {};
       this.iterator = -1;
       try {
@@ -1794,10 +2092,14 @@ var KViews = (() => {
       } catch (e) {
         throw new Error("Error on Collection init", e);
       }
-      let options = {};
-      Object.getOwnPropertyNames(opts).forEach((key) => {
-        options[key] = opts[key];
+      Object.defineProperty(this, "length", {
+        get() {
+          return this.items.length;
+        },
+        enumerable: true,
+        configurable: true
       });
+      let options = Object.assign({}, opts);
       Object.assign(this, options);
       if (options.hasOwnProperty("paging") && $(options.paging).length) {
         this.paging = new Paging($(options.paging)[0], this);
@@ -1820,6 +2122,11 @@ var KViews = (() => {
           this.on(event, opts.listeners[event]);
         }
       }
+      if (opts.itemListeners && typeof opts.itemListeners === "object") {
+        this.itemListeners = opts.itemListeners;
+      } else if (opts.itemOn && typeof opts.itemOn === "object") {
+        this.itemListeners = opts.itemOn;
+      }
     }
     /**
      * Event listener registration
@@ -1832,6 +2139,79 @@ var KViews = (() => {
       return this;
     }
     /**
+     * Remove event listener(s)
+     * @param {string} eventName - Event name
+     * @param {Function} [cb] - Optional callback to remove. If not provided, removes all listeners for the event
+     * @returns {Collection} This instance for chaining
+     */
+    off(eventName, cb) {
+      if (!eventName) {
+        this.callbacks = {};
+        return this;
+      }
+      if (!this.callbacks[eventName]) {
+        return this;
+      }
+      if (cb) {
+        const index = this.callbacks[eventName].indexOf(cb);
+        if (index > -1) {
+          this.callbacks[eventName].splice(index, 1);
+        }
+        if (this.callbacks[eventName].length === 0) {
+          delete this.callbacks[eventName];
+        }
+      } else {
+        delete this.callbacks[eventName];
+      }
+      return this;
+    }
+    /**
+     * Register a one-time event listener
+     * @param {string} eventName - Event name
+     * @param {Function} cb - Callback function
+     * @returns {Collection} This instance for chaining
+     */
+    once(eventName, cb) {
+      const wrapper = (...args) => {
+        cb(...args);
+        this.off(eventName, wrapper);
+      };
+      return this.on(eventName, wrapper);
+    }
+    /**
+     * Check if event has listeners
+     * @param {string} eventName - Event name
+     * @returns {boolean} True if event has listeners
+     */
+    hasListeners(eventName) {
+      return this.callbacks[eventName] && Array.isArray(this.callbacks[eventName]) && this.callbacks[eventName].length > 0;
+    }
+    /**
+     * Trigger an event (internal helper)
+     * @private
+     * @param {string} eventName - Event name
+     * @param {...any} args - Arguments to pass to callbacks
+     */
+    _trigger(eventName, ...args) {
+      if (this.callbacks[eventName] && Array.isArray(this.callbacks[eventName])) {
+        this.callbacks[eventName].forEach((cb) => {
+          if (typeof cb === "function") {
+            cb(...args);
+          }
+        });
+      }
+    }
+    /**
+     * Emit/trigger an event manually
+     * @param {string} eventName - Event name
+     * @param {...any} args - Arguments to pass to callbacks
+     * @returns {Collection} This instance for chaining
+     */
+    emit(eventName, ...args) {
+      this._trigger(eventName, ...args);
+      return this;
+    }
+    /**
      * Show listeners (debug)
      */
     showlisteners() {
@@ -1839,19 +2219,19 @@ var KViews = (() => {
     }
     /**
      * Remove item from collection
+     * 
+     * Removes item from items array. Does NOT trigger update event
+     * (that's handled by Item.remove() to avoid duplication).
+     * 
+     * @param {Item} item - Item instance to remove
+     * @returns {Promise} Resolves when item is removed
      */
     removeItem(item) {
-      for (var i = 0; i < this.items.length; i++) {
-        if (this.items[i].id === item.id) {
-          this.items.splice(i, 1);
-          for (var j = i; j < this.length - 1; j++) {
-            this[j] = this[j + 1];
-          }
-          delete this[j];
-          this.length--;
-          break;
-        }
+      const index = this.items.findIndex((i) => i === item || i.id && item.id && i.id === item.id);
+      if (index !== -1) {
+        this.items.splice(index, 1);
       }
+      return Promise.resolve();
     }
     /**
      * Set page size
@@ -1899,7 +2279,7 @@ var KViews = (() => {
           this.insertUrl = createURL(url);
           break;
         default:
-          console.log("setUrl", url);
+          log("setUrl", url);
           this.url = createURL(url);
           this.deleteUrl = typeof this.deleteUrl == "string" ? createURL(this.deleteUrl) : this.deleteUrl ?? createURL(this.url);
           this.updateUrl = typeof this.updateUrl == "string" ? createURL(this.updateUrl) : this.updateUrl ?? createURL(this.url);
@@ -1910,43 +2290,70 @@ var KViews = (() => {
     }
     /**
      * Receive remote data
+     * 
+     * Processes JSON:API document by hydrating relationships and extracting data array.
+     * Uses the new explicit hydration layer to replace relationship references with
+     * actual resource objects from included resources.
+     * 
+     * IMPORTANT: For single item responses (e.g., from append/create), uses parseItemData()
+     * to avoid wrapping in array and triggering collection replacement behavior.
      */
     receiveRemoteData(data) {
       dbg("Remote data received", data);
-      data = this.parse(data);
-      if (data == null) {
-        return;
-      }
-      if (data.constructor === Array) {
-        log("Append multiple items to collection");
-        if (this.items.length === 0) {
-          this.view.reset(true);
+      const isSingleItem = data && data.data && typeof data.data === "object" && !Array.isArray(data.data);
+      if (isSingleItem) {
+        const hydratedItem = parseItemData(data);
+        if (data.hasOwnProperty("meta")) {
+          if (data.meta.hasOwnProperty("totalRecords")) {
+            this.total = data.meta.totalRecords * 1;
+          }
+          if (data.meta.hasOwnProperty("offset")) {
+            this.offset = data.meta.offset;
+          }
         }
-        data.forEach((item) => {
-          this.loadItem(item);
-        });
-        return this.render();
-      }
-      if (data.constructor === Object) {
         if (this.items.length === 0) {
           this.view.reset(true);
         }
         dbg("Append single item to collection");
-        let newItem = this.loadItem(data);
+        let newItem = this.loadItem(hydratedItem);
         newItem.render(this.view, this.addontop);
-        if (this.onafterrender && typeof this.onafterrender === "function") {
-          this.onafterrender(this);
-        }
+        this._trigger("afterrender", this);
         return newItem;
+      } else {
+        const hydratedData = parseCollectionData(data);
+        const dataArray = this.extractMetadataAndData({ ...data, data: hydratedData });
+        if (dataArray == null) {
+          return;
+        }
+        if (dataArray.constructor === Array) {
+          log("Append multiple items to collection");
+          if (this.items.length === 0) {
+            this.view.reset(true);
+          }
+          const loadedItems = [];
+          dataArray.forEach((item) => {
+            const loadedItem = this.loadItem(item);
+            if (loadedItem) {
+              loadedItems.push(loadedItem);
+            }
+          });
+          this.render();
+          return loadedItems;
+        }
       }
     }
     /**
-     * Parse data
+     * Extract metadata and data from JSON:API document
+     * 
+     * Extracts metadata (totalRecords, offset) from JSON:API response meta object
+     * and returns the hydrated data array. Data hydration is handled by
+     * parseCollectionData() before this is called.
+     * 
+     * @param {Object} data - JSON:API document (data property should already be hydrated)
+     * @returns {Array} Array of hydrated item data objects
      */
-    parse(data) {
-      flattenDoc(data);
-      let doc = buildDb(data);
-      dbg("parse data", data);
+    extractMetadataAndData(data) {
+      dbg("extract metadata and data", data);
       if (!data.hasOwnProperty("data")) {
         return data;
       }
@@ -1959,6 +2366,16 @@ var KViews = (() => {
         }
       }
       return data.data;
+    }
+    /**
+     * Parse collection data from JSON:API document (legacy alias)
+     * 
+     * @deprecated Use extractMetadataAndData() instead
+     * @param {Object} data - JSON:API document
+     * @returns {Array} Array of hydrated item data objects
+     */
+    parse(data) {
+      return this.extractMetadataAndData(data);
     }
     /**
      * Load from data
@@ -1980,9 +2397,7 @@ var KViews = (() => {
       } else {
         dbg("collection does not have a view ", this);
       }
-      if (this.callbacks.load) {
-        this.callbacks.load.forEach((cb) => new Promise(() => cb(this)));
-      }
+      this._trigger("load", this);
       return this;
     }
     /**
@@ -2001,14 +2416,18 @@ var KViews = (() => {
     }
     /**
      * Clear collection
+     * 
+     * Synchronously clears items array and renders empty state.
+     * For async item cleanup, use destroy() instead.
+     * 
+     * @returns {Collection} This instance for chaining
      */
     clear() {
-      this.items.forEach((item) => {
-        item.remove();
-      });
       this.items = [];
-      this.length = 0;
-      this.render();
+      if (this.view) {
+        this.view.render();
+      }
+      this._trigger("update", this);
       return this;
     }
     /**
@@ -2018,49 +2437,32 @@ var KViews = (() => {
       if (this.view) {
         this.view.render();
       }
-      if (this.callbacks.afterrender) {
-        this.callbacks.afterrender.forEach((cb) => typeof cb === "function" && cb(this));
-      }
-      if (this.onafterrender && typeof this.onafterrender === "function") {
-        this.onafterrender(this);
-      }
+      this._trigger("afterrender", this);
       return this;
     }
     /**
      * Load from remote
+     * 
+     * Canonical method for loading collection data from API
      */
     loadFromRemote() {
-      return this.load_from_data_source();
-    }
-    reload() {
-      return this.loadFromRemote();
-    }
-    refresh() {
-      return this.loadFromRemote();
+      return this.loadFromDataSource();
     }
     /**
-     * Load from data source
+     * Load from data source (internal implementation)
+     * @private
      */
-    load_from_data_source() {
+    loadFromDataSource() {
       const overlay = createOverlay();
       let loader = null;
       if (this.view && this.view.el) {
-        if (typeof $ !== "undefined") {
-          loader = $(overlay).clone().insertBefore(this.view.el).width($(this.view.el).width()).height($(this.view.el).height());
-        } else {
-          loader = overlay.cloneNode(true);
-          if (this.view.el.parentNode) {
-            this.view.el.parentNode.insertBefore(loader, this.view.el);
-          }
-        }
+        loader = $(overlay).clone().insertBefore(this.view.el).width($(this.view.el).width()).height($(this.view.el).height());
       }
-      if (this.onbeforeload && typeof this.onbeforeload === "function") {
-        dbg("Exec onbeforeload");
-        this.onbeforeload(this);
-      }
+      this._trigger("beforeload", this);
       return new Promise((resolve, reject) => {
         if (!this.url) {
-          throw new Error("No valid URL provided");
+          reject(new Error("No valid URL provided"));
+          return;
         }
         if (typeof this.offset !== "undefined" && this.offset !== null) {
           this.url.parameters["page[" + this.type + "][offset]"] = this.offset;
@@ -2070,25 +2472,29 @@ var KViews = (() => {
         }
         let urlString = this.url.toString ? this.url.toString() : this.url;
         this.storage.read(this, urlString, {}).then((res) => {
-          this.clear();
-          this.receiveRemoteData(res.data);
-          if (this.callbacks["load"]) {
-            this.callbacks["load"].forEach((cb) => new Promise(() => cb(this)));
+          if (this.navtype === "page") {
+            this.items = [];
           }
+          this.receiveRemoteData(res.data);
+          this._trigger("load", this);
           if (loader) {
-            if (typeof loader.remove === "function") {
-              loader.remove();
-            } else if (loader.parentNode) {
-              loader.parentNode.removeChild(loader);
-            }
+            $(loader).remove();
           }
           if (this.paging) {
             this.paging.render();
           }
           resolve(this);
         }).catch((error2) => {
-          this.fail(error2.jqXHR || error2, error2.textStatus, error2.errorThrown);
-          reject(error2);
+          if (error2 instanceof Error && error2.jqXHR) {
+            this.fail(error2.jqXHR, error2.textStatus || "error", error2.errorThrown || error2);
+            reject(error2);
+          } else if (error2 && error2.jqXHR) {
+            this.fail(error2.jqXHR, error2.textStatus, error2.errorThrown);
+            reject(error2);
+          } else {
+            this.fail(null, "error", error2);
+            reject(error2);
+          }
         });
       });
     }
@@ -2099,32 +2505,28 @@ var KViews = (() => {
       dbg("Fail to load collection", xhr, txt, err, this);
     }
     /**
-     * Create item
-     */
-    createItem(itemData) {
-      return this.append(itemData);
-    }
-    /**
-     * New item alias
-     */
-    newItem(itemData) {
-      return this.append(itemData);
-    }
-    /**
      * On update callback
      */
     onupdate() {
       dbg("onupdate");
-      if (!this.callbacks.update) {
-        return;
-      }
-      this.callbacks.update.forEach((cb) => cb(this));
+      this._trigger("update", this);
+      return this;
     }
     /**
-     * Append item
+     * Insert a single new item into collection
+     * 
+     * Creates a single item via POST request and adds it to the collection.
+     * The server response should contain the created item in JSON:API format.
+     * 
+     * @param {Object} itemData - Single item data object (not an array)
+     * @returns {Promise<Item>} Promise resolving to the created Item instance
+     * @throws {Error} If itemData is an array (use batchInsert() instead)
      */
-    append(itemData) {
-      let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemData) };
+    insert(itemData2) {
+      if (Array.isArray(itemData2)) {
+        throw new Error("insert() expects a single item object. Use batchInsert() for multiple items.");
+      }
+      let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemData2) };
       if (this.type) {
         jsonApiDoc.type = this.type;
       }
@@ -2136,8 +2538,9 @@ var KViews = (() => {
         this.storage.create(this, insertUrlString, { contentType: "application/vnd.api+json" }, JSON.stringify(jsonApiDoc)).then((resp) => {
           let data = resp.data;
           let newItem = this.receiveRemoteData(data);
-          resolve(newItem);
+          log("newItem", newItem);
           this.onupdate();
+          resolve(newItem);
         }).catch((resp) => {
           dbg("fail to receive data", resp);
           reject(resp);
@@ -2145,12 +2548,85 @@ var KViews = (() => {
       });
     }
     /**
+     * Batch insert multiple items into collection
+     * 
+     * Creates multiple items via POST request and adds them to the collection.
+     * The server response should contain an array of created items in JSON:API format.
+     * 
+     * @param {Array} itemsData - Array of item data objects
+     * @returns {Promise<Array<Item>>} Promise resolving to array of created Item instances
+     * @throws {Error} If itemsData is not an array
+     */
+    batchInsert(itemsData) {
+      if (!Array.isArray(itemsData)) {
+        throw new Error("batchInsert() expects an array of items. Use insert() for a single item.");
+      }
+      if (itemsData.length === 0) {
+        return Promise.resolve([]);
+      }
+      let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemsData) };
+      if (this.type) {
+        jsonApiDoc.type = this.type;
+      }
+      return new Promise((resolve, reject) => {
+        if (!this.insertUrl) {
+          this.insertUrl = this.url;
+        }
+        let insertUrlString = this.insertUrl.toString ? this.insertUrl.toString() : this.insertUrl;
+        this.storage.create(this, insertUrlString, { contentType: "application/vnd.api+json" }, JSON.stringify(jsonApiDoc)).then((resp) => {
+          let data = resp.data;
+          const result = this.receiveRemoteData(data);
+          const newItems = Array.isArray(result) ? result : result ? [result] : [];
+          log("batchInsert newItems", newItems);
+          this.onupdate();
+          resolve(newItems);
+        }).catch((resp) => {
+          dbg("fail to receive batch data", resp);
+          reject(resp);
+        });
+      });
+    }
+    /**
+     * @deprecated Use insert() for single items or batchInsert() for multiple items
+     * This method is bivalent and will be removed in a future version.
+     * Alias for backward compatibility - delegates to insert() or batchInsert() based on input type.
+     */
+    append(itemData2) {
+      if (Array.isArray(itemData2)) {
+        return this.batchInsert(itemData2);
+      } else {
+        return this.insert(itemData2);
+      }
+    }
+    /**
+     * @deprecated Use insert() instead
+     * Alias for backward compatibility
+     */
+    createItem(itemData2) {
+      return this.insert(itemData2);
+    }
+    /**
+     * @deprecated Use insert() instead
+     * Alias for backward compatibility
+     */
+    newItem(itemData2) {
+      return this.insert(itemData2);
+    }
+    /**
+     * Batch insert new items to collection
+     * 
+     * Canonical method for inserting multiple items to collection
+     */
+    batchInsert(itemDatas) {
+      return this.append(itemData);
+    }
+    /**
      * Load item
      */
-    loadItem(itemData) {
-      log("loadItem from collection", itemData);
-      if (!itemData) {
-        log("no item data", itemData);
+    loadItem(itemData2) {
+      log("loadItem from collection", itemData2);
+      if (!itemData2) {
+        log("no item data", itemData2);
         return null;
       }
       let opts = {
@@ -2159,36 +2635,71 @@ var KViews = (() => {
         uievents: this.uievents,
         storage: this.storage
       };
-      if (this.setAttrAsId && itemData.id == null) {
-        log("set item id from attribute", this.setAttrAsId, itemData);
-        itemData.id = itemData.attributes[this.setAttrAsId];
+      if (this.setAttrAsId && itemData2.id == null) {
+        log("set item id from attribute", this.setAttrAsId, itemData2);
+        itemData2.id = itemData2.attributes[this.setAttrAsId];
       }
-      if (itemData.id && this.url) {
+      if (itemData2.id && this.url) {
         let tmp;
         tmp = createURL(this.url.toString());
-        tmp.path += "/" + itemData.id;
+        tmp.path += "/" + itemData2.id;
         opts.url = createURL(tmp.toString());
         opts.updateUrl = createURL(tmp.toString());
         opts.deleteUrl = createURL(tmp.toString());
       }
+      if (this.itemListeners) {
+        opts.itemListeners = this.itemListeners;
+      }
       let newItem = new Item(opts).bindView(new ItemView({
         template: this.template,
         container: this.view
-      })).loadFromData(itemData);
+      })).loadFromData(itemData2);
       if (this.addontop) {
         dbg("Add on top");
         this.items.unshift(newItem);
-        for (let i = this.length; i > 0; i--) {
-          this[i] = this[i - 1];
-        }
-        this[0] = newItem;
-        this.length++;
       } else {
         this.items.push(newItem);
-        this[this.length] = newItem;
-        this.length++;
       }
       return newItem;
+    }
+    /**
+     * Destroy collection and clean up resources
+     * 
+     * Removes event handlers, destroys all items and views, clears references.
+     * Safe to call multiple times.
+     * 
+     * @returns {Collection} This instance for chaining
+     */
+    destroy() {
+      const itemsToDestroy = [...this.items];
+      itemsToDestroy.forEach((item) => {
+        if (item && typeof item.destroy === "function") {
+          item.destroy();
+        }
+      });
+      this.items = [];
+      if (this.view && typeof this.view.destroy === "function") {
+        this.view.destroy();
+      }
+      this.view = null;
+      if (this.filtering && typeof this.filtering.destroy === "function") {
+        this.filtering.destroy();
+      }
+      this.filtering = null;
+      if (this.paging && typeof this.paging.destroy === "function") {
+        this.paging.destroy();
+      }
+      this.paging = null;
+      this.callbacks = {};
+      this.storage = null;
+      this.url = null;
+      this.deleteUrl = null;
+      this.insertUrl = null;
+      this.updateUrl = null;
+      this.items = [];
+      this.total = null;
+      this.offset = 0;
+      return this;
     }
   };
 
@@ -2197,31 +2708,16 @@ var KViews = (() => {
     constructor(filterForm, collection) {
       this.collection = collection;
       this.el = filterForm;
-      let $form;
-      if (typeof $ !== "undefined") {
-        $form = $(filterForm);
-        $form.data("instance", collection).on("submit", (e) => {
-          dbg("Filter form was submitted");
-          e.preventDefault();
-          this.handleSubmit($form[0]);
-        }).on("reset", () => {
-          delete this.collection.url.parameters.filter;
-          this.collection.loadFromRemote();
-          dbg("filter form reset");
-        });
-      } else {
-        let form = filterForm.nodeName ? filterForm : filterForm[0];
-        form._instance = collection;
-        form.addEventListener("submit", (e) => {
-          e.preventDefault();
-          this.handleSubmit(form);
-        });
-        form.addEventListener("reset", () => {
-          delete this.collection.url.parameters.filter;
-          this.collection.loadFromRemote();
-          dbg("filter form reset");
-        });
-      }
+      let $form = $(filterForm);
+      $form.data("instance", collection).on("submit", (e) => {
+        dbg("Filter form was submitted");
+        e.preventDefault();
+        this.handleSubmit($form[0]);
+      }).on("reset", () => {
+        delete this.collection.url.parameters.filter;
+        this.collection.loadFromRemote();
+        dbg("filter form reset");
+      });
     }
     /**
      * Handle form submit
@@ -2230,16 +2726,9 @@ var KViews = (() => {
       let filter = [];
       for (let i = 0; i < form.elements.length; i++) {
         let el = form.elements[i];
-        let value;
-        let operator;
-        if (typeof $ !== "undefined") {
-          let $el = $(el);
-          value = $el.val();
-          operator = $el.data("operator");
-        } else {
-          value = el.value;
-          operator = el.dataset ? el.dataset.operator : null;
-        }
+        let $el = $(el);
+        let value = $el.val();
+        let operator = $el.data("operator");
         if (el.name && value) {
           filter.push(
             el.name + (operator ? operator : "=") + value
@@ -2254,6 +2743,22 @@ var KViews = (() => {
       }
       this.collection.loadFromRemote();
     }
+    /**
+     * Destroy filtering and clean up resources
+     */
+    destroy() {
+      if (this.el) {
+        const $form = $(this.el);
+        $form.off("submit");
+        $form.off("reset");
+        if (typeof $form.removeData === "function") {
+          $form.removeData("instance");
+        }
+      }
+      this.collection = null;
+      this.el = null;
+      return this;
+    }
   };
 
   // src/utilities.js
@@ -2262,17 +2767,9 @@ var KViews = (() => {
      * Fill form fields with data from instance
      */
     fillForm: function(form, instance) {
-      let formEl;
-      if (typeof $ !== "undefined") {
-        formEl = $(form)[0];
-        if ($(form).prop("tagName") !== "FORM") {
-          return null;
-        }
-      } else {
-        formEl = form.nodeName ? form : form[0];
-        if (formEl.tagName !== "FORM") {
-          return null;
-        }
+      let formEl = $(form)[0];
+      if ($(form).prop("tagName") !== "FORM") {
+        return null;
       }
       if (!instance || !instance.hasOwnProperty("attributes")) {
         return null;
@@ -2283,24 +2780,14 @@ var KViews = (() => {
         }
         let val = instance.attributes[attrName];
         let inp = formEl.elements[attrName];
-        if (typeof $ !== "undefined") {
-          let $inp = $(inp);
-          if (instance.attributes[attrName] && typeof instance.attributes[attrName] === "object" && instance.attributes[attrName].hasOwnProperty("id")) {
-            val = instance.attributes[attrName].id;
-          }
-          if ($inp.attr("type") === "date") {
-            val = val ? val.substr(0, 10) : val;
-          }
-          $inp.val(val);
-        } else {
-          if (instance.attributes[attrName] && typeof instance.attributes[attrName] === "object" && instance.attributes[attrName].hasOwnProperty("id")) {
-            val = instance.attributes[attrName].id;
-          }
-          if (inp.type === "date") {
-            val = val ? val.substr(0, 10) : val;
-          }
-          inp.value = val;
+        let $inp = $(inp);
+        if (instance.attributes[attrName] && typeof instance.attributes[attrName] === "object" && instance.attributes[attrName].hasOwnProperty("id")) {
+          val = instance.attributes[attrName].id;
         }
+        if ($inp.attr("type") === "date") {
+          val = val ? val.substr(0, 10) : val;
+        }
+        $inp.val(val);
       });
       if (!instance.relationships) {
         return;
@@ -2310,11 +2797,7 @@ var KViews = (() => {
           return;
         }
         if (!instance.relationships[relName]) {
-          if (typeof $ !== "undefined") {
-            $(formEl.elements[relName]).val(null);
-          } else {
-            formEl.elements[relName].value = null;
-          }
+          $(formEl.elements[relName]).val(null);
           return;
         }
         let rel = instance.relationships[relName];
@@ -2324,36 +2807,15 @@ var KViews = (() => {
           rel.forEach((relItem) => {
             vals.push(relItem.id);
           });
-          if (typeof $ !== "undefined") {
-            $(formElRel).val(vals);
-          } else {
-            if (formElRel.multiple) {
-              Array.from(formElRel.options).forEach((opt) => {
-                opt.selected = vals.indexOf(opt.value) !== -1;
-              });
-            } else {
-              formElRel.value = vals[0] || null;
-            }
-          }
+          $(formElRel).val(vals);
         } else {
           dbg("set ", relName, rel);
           if (formElRel.tagName === "SELECT") {
-            let lbl = typeof $ !== "undefined" ? $(formElRel).data("label") : formElRel.dataset ? formElRel.dataset.label : null;
+            let lbl = $(formElRel).data("label");
             let lblVal = rel.hasOwnProperty("attributes") && rel.attributes[lbl] ? rel.attributes[lbl] : rel.id;
-            if (typeof $ !== "undefined") {
-              $("<option>").val(rel.id).text(lblVal).appendTo($(formElRel));
-            } else {
-              let option = document.createElement("option");
-              option.value = rel.id;
-              option.textContent = lblVal;
-              formElRel.appendChild(option);
-            }
+            $("<option>").val(rel.id).text(lblVal).appendTo($(formElRel));
           }
-          if (typeof $ !== "undefined") {
-            $(formElRel).val(rel.id);
-          } else {
-            formElRel.value = rel.id;
-          }
+          $(formElRel).val(rel.id);
         }
       });
     },
@@ -2361,64 +2823,34 @@ var KViews = (() => {
      * Capture form submit event and redirect it to callback
      */
     captureFormSubmit: function(form, cb) {
-      let formEl;
-      if (typeof $ !== "undefined") {
-        formEl = $(form);
-        if (formEl.prop("tagName") !== "FORM" || typeof cb !== "function") {
-          return;
-        }
-        formEl.off("submit").on("submit", (event) => {
-          event.preventDefault();
-          let frm = formEl[0];
-          cb(this.fetchFormData(frm), event);
-        });
-        return formEl;
-      } else {
-        formEl = form.nodeName ? form : form[0];
-        if (formEl.tagName !== "FORM" || typeof cb !== "function") {
-          return;
-        }
-        formEl.addEventListener("submit", (event) => {
-          event.preventDefault();
-          cb(this.fetchFormData(formEl), event);
-        });
-        return formEl;
+      let formEl = $(form);
+      if (formEl.prop("tagName") !== "FORM" || typeof cb !== "function") {
+        return;
       }
+      formEl.off("submit").on("submit", (event) => {
+        event.preventDefault();
+        let frm = formEl[0];
+        cb(this.fetchFormData(frm), event);
+      });
+      return formEl;
     },
     /**
      * Fetch form data - handles array notation (name[]) and normalizes form element
      */
     fetchFormData: function(form) {
-      let formEl;
-      if (typeof $ !== "undefined") {
-        formEl = $(form)[0];
-      } else {
-        formEl = form.nodeName ? form : form[0];
-      }
+      let formEl = $(form)[0];
       let formElements = {};
       Object.getOwnPropertyNames(formEl.elements).forEach((item) => {
         let el = formEl.elements[item];
-        let name, value;
-        if (typeof $ !== "undefined") {
-          let $item = $(el);
-          if (!$item.attr("name") || $item.attr("name") === "") {
-            return;
-          }
-          if ($item.attr("type") === "checkbox" && !$item[0].checked) {
-            return;
-          }
-          name = $item.attr("name");
-          value = $item.val();
-        } else {
-          if (!el.name || el.name === "") {
-            return;
-          }
-          if (el.type === "checkbox" && !el.checked) {
-            return;
-          }
-          name = el.name;
-          value = el.value;
+        let $item = $(el);
+        if (!$item.attr("name") || $item.attr("name") === "") {
+          return;
         }
+        if ($item.attr("type") === "checkbox" && !$item[0].checked) {
+          return;
+        }
+        let name = $item.attr("name");
+        let value = $item.val();
         let arrayMatch = /(\w+)\[\]/.exec(name);
         if (arrayMatch) {
           let arrayName = arrayMatch[1];
@@ -2459,19 +2891,7 @@ var KViews = (() => {
         };
       }
       let options = { dataBindings: {}, addontop: false };
-      if (typeof $ !== "undefined") {
-        options = Object.assign(options, $(el).data());
-      } else {
-        if (el.dataset) {
-          Object.keys(el.dataset).forEach((key) => {
-            try {
-              options[key] = JSON.parse(el.dataset[key]);
-            } catch (e) {
-              options[key] = el.dataset[key];
-            }
-          });
-        }
-      }
+      options = Object.assign(options, $(el).data());
       try {
         Object.assign(options, parseOptions(opts));
       } catch (e) {
@@ -2481,20 +2901,53 @@ var KViews = (() => {
     }
     /**
      * Helper: Check for existing instance and update if found
+     * 
+     * SAFE UPDATE CONTRACT:
+     * Only updates whitelisted safe configuration options.
+     * Does not overwrite internal runtime state (callbacks, items, views, etc.)
+     * 
+     * Safe to update:
+     * - url, updateUrl, deleteUrl, insertUrl (via setUrl)
+     * - template, type, pageSize, offset (configuration)
+     * - emptyview, filter, paging (view configuration)
+     * 
+     * NOT updated (internal state):
+     * - callbacks, items, views, storage, filtering, paging instances
+     * - length, total, iterator (runtime state)
      */
     static getOrUpdateInstance(el, options) {
-      let existingInstance;
-      if (typeof $ !== "undefined") {
-        existingInstance = $(el).data("instance");
-      } else {
-        existingInstance = el._instance;
-      }
+      let existingInstance = $(el).data("instance");
       if (existingInstance !== void 0) {
+        const safeUpdateOptions = [
+          "url",
+          "updateUrl",
+          "deleteUrl",
+          "insertUrl",
+          "template",
+          "type",
+          "pageSize",
+          "offset",
+          "emptyview",
+          "filter",
+          "paging",
+          "addontop",
+          "uievents",
+          "setAttrAsId",
+          "itemListeners",
+          "itemOn"
+        ];
         if (options.url) {
           existingInstance.setUrl(options.url);
           delete options.url;
         }
-        Object.assign(existingInstance, parseOptions(options));
+        const parsedOptions = parseOptions(options);
+        const safeUpdates = {};
+        safeUpdateOptions.forEach((key) => {
+          if (parsedOptions.hasOwnProperty(key)) {
+            safeUpdates[key] = parsedOptions[key];
+          }
+        });
+        Object.assign(existingInstance, safeUpdates);
         return existingInstance;
       }
       return null;
@@ -2504,15 +2957,7 @@ var KViews = (() => {
      */
     static processEmptyView(options) {
       if (options.hasOwnProperty("emptyview")) {
-        if (typeof $ !== "undefined") {
-          options.emptyview = $(options.emptyview).remove();
-        } else {
-          let emptyViewEl = typeof options.emptyview === "string" ? document.querySelector(options.emptyview) : options.emptyview;
-          if (emptyViewEl && emptyViewEl.parentNode) {
-            emptyViewEl.parentNode.removeChild(emptyViewEl);
-          }
-          options.emptyview = emptyViewEl;
-        }
+        options.emptyview = $(options.emptyview).remove();
       }
     }
     /**
@@ -2524,14 +2969,10 @@ var KViews = (() => {
           instance.on(eventName, listeners[eventName]);
         });
       }
-      if (typeof $ !== "undefined") {
-        $(el).data("instance", instance);
-      } else {
-        el._instance = instance;
-      }
+      $(el).data("instance", instance);
       dbg("instance", instance.url);
       if (instance.url && (typeof options.dontload === "undefined" || !options.dontload)) {
-        console.log("loadFromRemote now", options, instance);
+        log("loadFromRemote now", options, instance);
         instance.loadFromRemote();
       }
       return instance;
@@ -2553,29 +2994,15 @@ var KViews = (() => {
       let listeners = options.on;
       delete options.on;
       dbg("Create collection instance", options);
-      let templateTxt = null;
-      if (typeof $ !== "undefined") {
-        templateTxt = $(el).length ? $(el).html() : null;
-      } else {
-        templateTxt = el.innerHTML;
-      }
+      let templateTxt = $(el).length ? $(el).html() : null;
       if (options.template) {
-        if (typeof $ !== "undefined" && options.template instanceof jQuery) {
+        if (options.template instanceof jQuery) {
           dbg("template is jQuery object", options.template, el);
           let $tpl = $(options.template).clone().removeAttr("id");
           templateTxt = $("<div>").append($tpl).html();
         } else if (typeof options.template === "string") {
           dbg("template is raw text: can be either a jQuery selector or raw HTML", options.template, el);
-          if (typeof $ !== "undefined") {
-            templateTxt = $("<div>").append($(options.template).clone().removeAttr("id")).html();
-          } else {
-            let tplEl = document.querySelector(options.template);
-            if (tplEl) {
-              let div = document.createElement("div");
-              div.appendChild(tplEl.cloneNode(true));
-              templateTxt = div.innerHTML;
-            }
-          }
+          templateTxt = $("<div>").append($(options.template).clone().removeAttr("id")).html();
         }
       }
       if (templateTxt !== null) {
@@ -2584,24 +3011,16 @@ var KViews = (() => {
       }
       let collectionConfig = {
         el,
-        itemsContainer: options.hasOwnProperty("container") ? typeof $ !== "undefined" ? $(options.container) : document.querySelector(options.container) : el,
+        itemsContainer: options.hasOwnProperty("container") ? $(options.container) : el,
         allowempty: options.disableempty !== true
       };
       options.view = new CollectionView(collectionConfig);
-      console.log("Collection constructor", options);
+      log("Collection constructor", options);
       let instance = new Collection(options);
       if (options.hasOwnProperty("filter")) {
-        let filterEl;
-        if (typeof $ !== "undefined") {
-          filterEl = $(options.filter);
-          if (filterEl.length && filterEl.prop("tagName") === "FORM") {
-            instance.filtering = new Filtering(filterEl, instance);
-          }
-        } else {
-          filterEl = typeof options.filter === "string" ? document.querySelector(options.filter) : options.filter;
-          if (filterEl && filterEl.tagName === "FORM") {
-            instance.filtering = new Filtering(filterEl, instance);
-          }
+        let filterEl = $(options.filter);
+        if (filterEl.length && filterEl.prop("tagName") === "FORM") {
+          instance.filtering = new Filtering(filterEl, instance);
         }
       }
       _KViews.finalizeInstance(el, instance, options, listeners);
@@ -2625,18 +3044,14 @@ var KViews = (() => {
       delete options.on;
       options.template = null;
       let templateTxt = null;
-      if (typeof $ !== "undefined") {
-        if ($(el).length) {
-          templateTxt = el[0] ? el[0].outerHTML : el.outerHTML;
-        }
-      } else {
-        templateTxt = el.outerHTML;
+      if ($(el).length) {
+        templateTxt = el[0] ? el[0].outerHTML : el.outerHTML;
       }
       if (templateTxt) {
         templateTxt = templateTxt.replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&apos;/gi, "'").replace(/&quot;/gi, '"').replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&");
         options.template = template(templateTxt);
       }
-      let elId = typeof $ !== "undefined" ? $(el).attr("id") : el.id;
+      let elId = $(el).attr("id");
       let instance = new Item(options, data).bindView(new ItemView({
         template: options.template,
         el,
@@ -2663,13 +3078,11 @@ var KViews = (() => {
       let resourcetype = "collection";
       if (opts && opts.resourcetype) {
         resourcetype = opts.resourcetype;
-      } else if (typeof $ !== "undefined") {
+      } else {
         let dataResourcetype = $(el).data("resourcetype");
         if (dataResourcetype) {
           resourcetype = dataResourcetype;
         }
-      } else if (el.dataset && el.dataset.resourcetype) {
-        resourcetype = el.dataset.resourcetype;
       }
       if (resourcetype === "item") {
         return KViews2.createItemInstance(el, opts);

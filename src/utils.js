@@ -125,29 +125,11 @@ deepmerge.all = function deepmergeAll(array, optionsArgument) {
  */
 export function getBoundObjects(el) {
     let db = {};
-    if (!el || (typeof $ !== "undefined" && $(el).length === 0)) {
+    if (!el || $(el).length === 0) {
         return db;
     }
 
-    // Use jQuery if available, otherwise use native DOM API
-    let boundData;
-    if (typeof $ !== "undefined") {
-        boundData = $(el).data();
-    } else {
-        boundData = {};
-        // Fallback: read data-* attributes manually
-        if (el.dataset) {
-            Object.keys(el.dataset).forEach(key => {
-                try {
-                    db[key] = JSON.parse(el.dataset[key]);
-                } catch (e) {
-                    db[key] = el.dataset[key];
-                }
-            });
-        }
-        return db;
-    }
-
+    let boundData = $(el).data();
     for (let key in boundData) {
         if (typeof boundData[key] === "object" && key !== "instance") {
             db[key] = boundData[key];
@@ -170,14 +152,6 @@ export function template(text) {
  * Create overlay element for loading indicators
  */
 export function createOverlay() {
-    if (typeof $ !== "undefined") {
-        return $("<div>").text("Se incarca").addClass("komponent-overlay")
-            .attr("style", "background: silver; text-align: center;position:absolute; z-index:100000");
-    }
-    // Fallback without jQuery
-    const overlay = document.createElement("div");
-    overlay.textContent = "Se incarca";
-    overlay.className = "komponent-overlay";
-    overlay.style.cssText = "background: silver; text-align: center;position:absolute; z-index:100000";
-    return overlay;
+    return $("<div>").text("Se incarca").addClass("komponent-overlay")
+        .attr("style", "background: silver; text-align: center;position:absolute; z-index:100000");
 }
