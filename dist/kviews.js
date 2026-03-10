@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-03-08T18:21:57.413Z
+ * Built: 2026-03-10T17:18:20.423Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -722,46 +722,46 @@ var KViews = (() => {
     }
     return hydratedData;
   }
-  function parseDataForInsertOrUpdate(itemData2) {
-    if (itemData2 === null) {
+  function parseDataForInsertOrUpdate(itemData) {
+    if (itemData === null) {
       return null;
     }
-    if (typeof itemData2 !== "object") {
-      throw new Error("Invalid item data: " + itemData2);
+    if (typeof itemData !== "object") {
+      throw new Error("Invalid item data: " + itemData);
     }
-    if (itemData2.constructor === Array || itemData2.hasOwnProperty("items") && itemData2.hasOwnProperty("length")) {
+    if (itemData.constructor === Array || itemData.hasOwnProperty("items") && itemData.hasOwnProperty("length")) {
       let resource2 = [];
-      itemData2.forEach(function(item) {
+      itemData.forEach(function(item) {
         resource2.push(parseDataForInsertOrUpdate(item));
       });
       return resource2;
     }
-    if (itemData2.constructor !== Object) {
+    if (itemData.constructor !== Object) {
       throw new Error("Invalid case");
     }
     let resource = {};
-    if (!itemData2.hasOwnProperty("attributes")) {
+    if (!itemData.hasOwnProperty("attributes")) {
       let tmp = { attributes: {} };
-      if (itemData2.hasOwnProperty("type")) {
-        tmp.type = itemData2.type;
+      if (itemData.hasOwnProperty("type")) {
+        tmp.type = itemData.type;
       }
-      Object.assign(tmp.attributes, itemData2);
-      itemData2 = tmp;
+      Object.assign(tmp.attributes, itemData);
+      itemData = tmp;
     }
-    Object.getOwnPropertyNames(itemData2.attributes).forEach(function(attr) {
-      if (itemData2.attributes[attr] && typeof itemData2.attributes[attr] === "object") {
+    Object.getOwnPropertyNames(itemData.attributes).forEach(function(attr) {
+      if (itemData.attributes[attr] && typeof itemData.attributes[attr] === "object") {
         if (!resource.relationships) {
           resource.relationships = {};
         }
         resource.relationships[attr] = {
-          data: parseDataForInsertOrUpdate(itemData2.attributes[attr])
+          data: parseDataForInsertOrUpdate(itemData.attributes[attr])
         };
         return;
       }
       if (!resource.attributes) {
         resource.attributes = {};
       }
-      resource.attributes[attr] = itemData2.attributes[attr];
+      resource.attributes[attr] = itemData.attributes[attr];
     });
     return resource;
   }
@@ -2522,11 +2522,11 @@ var KViews = (() => {
      * @returns {Promise<Item>} Promise resolving to the created Item instance
      * @throws {Error} If itemData is an array (use batchInsert() instead)
      */
-    insert(itemData2) {
-      if (Array.isArray(itemData2)) {
+    insert(itemData) {
+      if (Array.isArray(itemData)) {
         throw new Error("insert() expects a single item object. Use batchInsert() for multiple items.");
       }
-      let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemData2) };
+      let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemData) };
       if (this.type) {
         jsonApiDoc.type = this.type;
       }
@@ -2591,42 +2591,34 @@ var KViews = (() => {
      * This method is bivalent and will be removed in a future version.
      * Alias for backward compatibility - delegates to insert() or batchInsert() based on input type.
      */
-    append(itemData2) {
-      if (Array.isArray(itemData2)) {
-        return this.batchInsert(itemData2);
+    append(itemData) {
+      if (Array.isArray(itemData)) {
+        return this.batchInsert(itemData);
       } else {
-        return this.insert(itemData2);
+        return this.insert(itemData);
       }
     }
     /**
      * @deprecated Use insert() instead
      * Alias for backward compatibility
      */
-    createItem(itemData2) {
-      return this.insert(itemData2);
+    createItem(itemData) {
+      return this.insert(itemData);
     }
     /**
      * @deprecated Use insert() instead
      * Alias for backward compatibility
      */
-    newItem(itemData2) {
-      return this.insert(itemData2);
-    }
-    /**
-     * Batch insert new items to collection
-     * 
-     * Canonical method for inserting multiple items to collection
-     */
-    batchInsert(itemDatas) {
-      return this.append(itemData);
+    newItem(itemData) {
+      return this.insert(itemData);
     }
     /**
      * Load item
      */
-    loadItem(itemData2) {
-      log("loadItem from collection", itemData2);
-      if (!itemData2) {
-        log("no item data", itemData2);
+    loadItem(itemData) {
+      log("loadItem from collection", itemData);
+      if (!itemData) {
+        log("no item data", itemData);
         return null;
       }
       let opts = {
@@ -2635,14 +2627,14 @@ var KViews = (() => {
         uievents: this.uievents,
         storage: this.storage
       };
-      if (this.setAttrAsId && itemData2.id == null) {
-        log("set item id from attribute", this.setAttrAsId, itemData2);
-        itemData2.id = itemData2.attributes[this.setAttrAsId];
+      if (this.setAttrAsId && itemData.id == null) {
+        log("set item id from attribute", this.setAttrAsId, itemData);
+        itemData.id = itemData.attributes[this.setAttrAsId];
       }
-      if (itemData2.id && this.url) {
+      if (itemData.id && this.url) {
         let tmp;
         tmp = createURL(this.url.toString());
-        tmp.path += "/" + itemData2.id;
+        tmp.path += "/" + itemData.id;
         opts.url = createURL(tmp.toString());
         opts.updateUrl = createURL(tmp.toString());
         opts.deleteUrl = createURL(tmp.toString());
@@ -2653,7 +2645,7 @@ var KViews = (() => {
       let newItem = new Item(opts).bindView(new ItemView({
         template: this.template,
         container: this.view
-      })).loadFromData(itemData2);
+      })).loadFromData(itemData);
       if (this.addontop) {
         dbg("Add on top");
         this.items.unshift(newItem);
