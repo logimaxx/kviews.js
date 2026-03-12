@@ -1,11 +1,11 @@
 import { dbg, log, parseOptions, template } from './utils.js';
-import { createURL } from './URL.js';
 import { Collection } from './Collection.js';
 import { Item } from './Item.js';
 import { CollectionView } from './CollectionView.js';
 import { ItemView } from './ItemView.js';
 import { Filtering } from './Filtering.js';
 import { utilities } from './utilities.js';
+import { Sorting } from './Sorting.js';
 
 /**
  * Main KViews class - factory for creating Item and Collection instances
@@ -139,6 +139,7 @@ export class KViews {
     static createCollectionInstance(el, opts) {
         // Prepare options
         let options = KViews.prepareOptions(el, opts);
+        log("createCollectionInstance", options);
         if (!options) {
             return null;
         }
@@ -205,6 +206,14 @@ export class KViews {
             let filterEl = $(options.filter);
             if (filterEl.length && filterEl.prop("tagName") === "FORM") {
                 instance.filtering = new Filtering(filterEl, instance);
+            }
+        }
+
+        if (options.hasOwnProperty("sort")) {
+            log("setup sorting", options.sort);
+            let sortEl = $(options.sort);
+            if (sortEl.length) {
+                instance.sorting = new Sorting(sortEl, instance);
             }
         }
 

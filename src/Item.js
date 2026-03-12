@@ -49,6 +49,16 @@ export class Item {
         if (this.url) {
             this.setUrl(this.url);
         }
+        if(this.deleteUrl) {
+            log("deleteUrl", this.deleteUrl);
+            this.setUrl(this.deleteUrl, "delete");
+        }
+        if(this.updateUrl) {
+            this.setUrl(this.updateUrl, "update");
+        }
+        if(this.insertUrl) {
+            this.setUrl(this.insertUrl, "insert");
+        }
 
         // Link views to this item
         this.views.forEach((view) => {
@@ -174,6 +184,9 @@ export class Item {
                 break;
             case "update":
                 this.updateUrl = createURL(url);
+                break;
+            case "insert":
+                this.insertUrl = createURL(url);
                 break;
             default:
                 this.url = createURL(url);
@@ -941,6 +954,7 @@ export class Item {
 
         try {
             // Convert URL object to string for Storage
+            log("delete", this.deleteUrl.toString());
             await this.storage.delete(this, this.deleteUrl.toString(), {});
             await this.remove();
         } catch (error) {

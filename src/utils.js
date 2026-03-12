@@ -21,7 +21,11 @@ export function error() {
     }
 }
 
-
+export function trace() {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel>=4) {
+        console.trace(...arguments);
+    }
+}
 
 
 /**

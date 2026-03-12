@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-03-10T17:18:20.423Z
+ * Built: 2026-03-12T11:02:36.079Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -32,6 +32,7 @@ var KViews = (() => {
     ItemView: () => ItemView,
     KViews: () => KViews2,
     Paging: () => Paging,
+    Sorting: () => Sorting,
     Storage: () => Storage,
     URL: () => URL,
     createOverlay: () => createOverlay,
@@ -44,6 +45,7 @@ var KViews = (() => {
     log: () => log,
     parseOptions: () => parseOptions,
     template: () => template,
+    trace: () => trace,
     uid: () => uid,
     utilities: () => utilities
   });
@@ -62,6 +64,11 @@ var KViews = (() => {
   function error() {
     if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel >= 1) {
       console.error(...arguments);
+    }
+  }
+  function trace() {
+    if (typeof kviewsLogLevel !== "undefined" && kviewsLogLevel >= 4) {
+      console.trace(...arguments);
     }
   }
   function uid() {
@@ -998,6 +1005,16 @@ var KViews = (() => {
       if (this.url) {
         this.setUrl(this.url);
       }
+      if (this.deleteUrl) {
+        log("deleteUrl", this.deleteUrl);
+        this.setUrl(this.deleteUrl, "delete");
+      }
+      if (this.updateUrl) {
+        this.setUrl(this.updateUrl, "update");
+      }
+      if (this.insertUrl) {
+        this.setUrl(this.insertUrl, "insert");
+      }
       this.views.forEach((view) => {
         view.item = this;
       });
@@ -1104,6 +1121,9 @@ var KViews = (() => {
           break;
         case "update":
           this.updateUrl = createURL(url);
+          break;
+        case "insert":
+          this.insertUrl = createURL(url);
           break;
         default:
           this.url = createURL(url);
@@ -1696,6 +1716,7 @@ var KViews = (() => {
         Object.assign(deleteOps, ops);
       }
       try {
+        log("delete", this.deleteUrl.toString());
         await this.storage.delete(this, this.deleteUrl.toString(), {});
         await this.remove();
       } catch (error2) {
@@ -2087,6 +2108,7 @@ var KViews = (() => {
       this.itemListeners = null;
       this.callbacks = {};
       this.iterator = -1;
+      trace("Collection init", opts);
       try {
         opts = parseOptions(opts);
       } catch (e) {
@@ -2106,6 +2128,15 @@ var KViews = (() => {
       }
       if (this.url) {
         this.setUrl(this.url);
+      }
+      if (this.deleteUrl) {
+        this.setUrl(this.deleteUrl, "delete");
+      }
+      if (this.updateUrl) {
+        this.setUrl(this.updateUrl, "update");
+      }
+      if (this.insertUrl) {
+        this.setUrl(this.insertUrl, "insert");
       }
       if (this.view) {
         this.view.collection = this;
@@ -2633,11 +2664,18 @@ var KViews = (() => {
       }
       if (itemData.id && this.url) {
         let tmp;
-        tmp = createURL(this.url.toString());
-        tmp.path += "/" + itemData.id;
-        opts.url = createURL(tmp.toString());
-        opts.updateUrl = createURL(tmp.toString());
-        opts.deleteUrl = createURL(tmp.toString());
+        const url = createURL(this.url.toString());
+        url.path += "/" + itemData.id;
+        opts.url = createURL(url.toString());
+        const updateUrl = createURL(this.updateUrl.toString());
+        updateUrl.path += "/" + itemData.id;
+        opts.updateUrl = createURL(updateUrl.toString());
+        const deleteUrl = createURL(this.deleteUrl.toString());
+        deleteUrl.path += "/" + itemData.id;
+        opts.deleteUrl = createURL(deleteUrl.toString());
+        const insertUrl = createURL(this.insertUrl.toString());
+        insertUrl.path += "/" + itemData.id;
+        opts.insertUrl = createURL(insertUrl.toString());
       }
       if (this.itemListeners) {
         opts.itemListeners = this.itemListeners;
@@ -2864,6 +2902,66 @@ var KViews = (() => {
     }
   };
 
+  // src/Sorting.js
+  var Sorting = class {
+    constructor(sortHeader, collection) {
+      this.el = sortHeader;
+      this.collection = collection;
+      const $sorts = sortHeader.find("[data-sortfld]").data("instance", this.collection).on("click", this.sortNow.bind(this));
+    }
+    sortNow(ev) {
+      let $lnk = $(ev.currentTarget);
+      let fld = $lnk.data("sortfld");
+      let dir = $lnk.data("sortdir");
+      let inst = this.collection;
+      let sort = inst.url.parameters.hasOwnProperty("sort") ? inst.url.parameters.sort : "";
+      let sortArr = [];
+      sort.split(",").forEach(function(item) {
+        let res = /^(-*)([a-z0-9\-\_]+)$/.exec(item.trim());
+        if (!res)
+          return;
+        if (res[2] == fld)
+          return;
+        sortArr.push(item);
+      });
+      switch (dir) {
+        case "up":
+          sortArr.push("-" + fld);
+          $lnk.data("sortdir", "down");
+          $lnk.find(".sort-up").hide();
+          $lnk.find(".sort-down").show();
+          $lnk.find(".sort-default").hide();
+          break;
+        case "down":
+          $lnk.data("sortdir", null);
+          $lnk.find(".sort-up").hide();
+          $lnk.find(".sort-down").hide();
+          $lnk.find(".sort-default").show();
+          break;
+        default:
+          $lnk.data("sortdir", "up");
+          sortArr.push(fld);
+          $lnk.find(".sort-up").show();
+          $lnk.find(".sort-down").hide();
+          $lnk.find(".sort-default").hide();
+      }
+      let nxtSort = sortArr.join(",");
+      if (sort !== nxtSort) {
+        inst.url.parameters.sort = nxtSort;
+        inst.loadFromRemote();
+      }
+    }
+    destroy() {
+      if (this.el) {
+        $(this.el).find("[data-sortfld]").each(function(sort) {
+          $(this).off("click");
+          $(this).removeData("instance");
+        });
+      }
+      return this;
+    }
+  };
+
   // src/KViews.js
   var KViews2 = class _KViews {
     constructor() {
@@ -2974,6 +3072,7 @@ var KViews = (() => {
      */
     static createCollectionInstance(el, opts) {
       let options = _KViews.prepareOptions(el, opts);
+      log("createCollectionInstance", options);
       if (!options) {
         return null;
       }
@@ -3013,6 +3112,13 @@ var KViews = (() => {
         let filterEl = $(options.filter);
         if (filterEl.length && filterEl.prop("tagName") === "FORM") {
           instance.filtering = new Filtering(filterEl, instance);
+        }
+      }
+      if (options.hasOwnProperty("sort")) {
+        log("setup sorting", options.sort);
+        let sortEl = $(options.sort);
+        if (sortEl.length) {
+          instance.sorting = new Sorting(sortEl, instance);
         }
       }
       _KViews.finalizeInstance(el, instance, options, listeners);

@@ -1,4 +1,4 @@
-import { dbg, log, parseOptions, createOverlay } from './utils.js';
+import { dbg, log, parseOptions, createOverlay, trace } from './utils.js';
 import { createURL } from './URL.js';
 import { Storage } from './Storage.js';
 import { parseCollectionData, parseItemData, parseDataForInsertOrUpdate } from './dataParser.js';
@@ -35,6 +35,7 @@ export class Collection {
         this.callbacks = {};
         this.iterator = -1;
 
+        trace("Collection init", opts);
         try {
             opts = parseOptions(opts);
         } catch (e) {
@@ -61,6 +62,15 @@ export class Collection {
 
         if(this.url) {
             this.setUrl(this.url);
+        }
+        if(this.deleteUrl) {
+            this.setUrl(this.deleteUrl, "delete");
+        }
+        if(this.updateUrl) {
+            this.setUrl(this.updateUrl, "update");
+        }
+        if(this.insertUrl) {
+            this.setUrl(this.insertUrl, "insert");
         }
 
         if (this.view) {
@@ -723,13 +733,21 @@ export class Collection {
             // Create new URL instances by cloning and modifying
             let tmp;
             
-            tmp = createURL(this.url.toString());
-            tmp.path += "/" + itemData.id;
-            // tmp.path += "/" + itemData.id;
-            opts.url = createURL(tmp.toString());
-            opts.updateUrl = createURL(tmp.toString());
-            opts.deleteUrl = createURL(tmp.toString());
+            const url = createURL(this.url.toString());
+            url.path += "/" + itemData.id;
+            opts.url = createURL(url.toString());
 
+            const updateUrl = createURL(this.updateUrl.toString());
+            updateUrl.path += "/" + itemData.id;
+            opts.updateUrl = createURL(updateUrl.toString());
+
+            const deleteUrl = createURL(this.deleteUrl.toString());
+            deleteUrl.path += "/" + itemData.id;
+            opts.deleteUrl = createURL(deleteUrl.toString());
+            
+            const insertUrl = createURL(this.insertUrl.toString());
+            insertUrl.path += "/" + itemData.id;
+            opts.insertUrl = createURL(insertUrl.toString());
         }
 
         // Apply item listeners before creating item (so they're active when loadFromData triggers events)

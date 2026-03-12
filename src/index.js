@@ -11,6 +11,7 @@ export { CollectionView } from './CollectionView.js';
 export { Storage } from './Storage.js';
 export { URL, createURL } from './URL.js';
 export { Filtering } from './Filtering.js';
+export { Sorting } from './Sorting.js';
 export { Paging } from './Paging.js';
 export { utilities } from './utilities.js';
 export * from './utils.js';
