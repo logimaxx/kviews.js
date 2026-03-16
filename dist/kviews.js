@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-03-12T11:02:36.079Z
+ * Built: 2026-03-16T11:32:06.024Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -1362,12 +1362,6 @@ var KViews = (() => {
             context[relName] = typeof rel === "object" && rel !== null ? Object.assign({}, rel) : rel;
           }
         });
-      }
-      if (this.id !== null && this.id !== void 0) {
-        context.id = this.id;
-      }
-      if (this.type) {
-        context.type = this.type;
       }
       return context;
     }

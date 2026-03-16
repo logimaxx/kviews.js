@@ -484,13 +484,13 @@ export class Item {
             });
         }
         
-        // Add id and type for template access
-        if (this.id !== null && this.id !== undefined) {
-            context.id = this.id;
-        }
-        if (this.type) {
-            context.type = this.type;
-        }
+        // // Add id and type for template access
+        // if (this.id !== null && this.id !== undefined) {
+        //     context.id = this.id;
+        // }
+        // if (this.type) {
+        //     context.type = this.type;
+        // }
         
         return context;
     }
