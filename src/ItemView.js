@@ -130,9 +130,11 @@ export class ItemView {
      * After render callback
      */
     afterrender() {
+        
         if (!this.callbacks.afterrender) {
             return;
         }
+        console.log("afterend of view", this);
         this.callbacks.afterrender.forEach((cb) => cb(this));
     }
 
@@ -152,7 +154,8 @@ export class ItemView {
         }
         
         log("View item", this.item);
-        if (this.item && this.item.uievents) {
+        if (this.item && this.item.uievents ) {
+            log("UI events", this.item.uievents);
             this.item.uievents.forEach(action => {
                 log("UI event", action, renderedEl);
                 if (action.selector && action.event && action.callback) {

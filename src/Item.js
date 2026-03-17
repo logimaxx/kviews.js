@@ -68,6 +68,7 @@ export class Item {
         // Apply item listeners if provided in options (from collection)
         if (options.itemListeners && typeof options.itemListeners === "object") {
             Object.getOwnPropertyNames(options.itemListeners).forEach((eventName) => {
+                log("apply item listener", eventName, options.itemListeners[eventName]);
                 this.on(eventName, options.itemListeners[eventName]);
             });
         }
@@ -972,14 +973,16 @@ export class Item {
             if (typeof collectionView === "undefined") {
                 dbg("collectionView is undefined so render view");
                 view.render();
-                return;
+                
             }
-            if (view.container === collectionView) {
+            else if (view.container === collectionView) {
                 dbg("collectionView matches view container so render view");
                 view.render(false, addontop);
             }
+            dbg("trigger afterrender", this,view,view.el);
+            this._trigger('afterrender', this,view);
         });
-        this._trigger('afterrender', this);
+        
         return this;
     }
 

@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-03-16T11:32:06.024Z
+ * Built: 2026-03-17T11:44:31.799Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -864,6 +864,7 @@ var KViews = (() => {
       if (!this.callbacks.afterrender) {
         return;
       }
+      console.log("afterend of view", this);
       this.callbacks.afterrender.forEach((cb) => cb(this));
     }
     /**
@@ -877,6 +878,7 @@ var KViews = (() => {
       }
       log("View item", this.item);
       if (this.item && this.item.uievents) {
+        log("UI events", this.item.uievents);
         this.item.uievents.forEach((action) => {
           log("UI event", action, renderedEl);
           if (action.selector && action.event && action.callback) {
@@ -1020,6 +1022,7 @@ var KViews = (() => {
       });
       if (options.itemListeners && typeof options.itemListeners === "object") {
         Object.getOwnPropertyNames(options.itemListeners).forEach((eventName) => {
+          log("apply item listener", eventName, options.itemListeners[eventName]);
           this.on(eventName, options.itemListeners[eventName]);
         });
       }
@@ -1727,14 +1730,13 @@ var KViews = (() => {
         if (typeof collectionView === "undefined") {
           dbg("collectionView is undefined so render view");
           view.render();
-          return;
-        }
-        if (view.container === collectionView) {
+        } else if (view.container === collectionView) {
           dbg("collectionView matches view container so render view");
           view.render(false, addontop);
         }
+        dbg("trigger afterrender", this, view, view.el);
+        this._trigger("afterrender", this, view);
       });
-      this._trigger("afterrender", this);
       return this;
     }
     /**
