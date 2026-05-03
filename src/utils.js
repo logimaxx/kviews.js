@@ -155,7 +155,10 @@ export function template(text) {
 /**
  * Create overlay element for loading indicators
  */
-export function createOverlay() {
-    return $("<div>").text("Se incarca").addClass("komponent-overlay")
-        .attr("style", "background: silver; text-align: center;position:absolute; z-index:100000");
+export function createOverlay(instance) {
+    return $("<div>").text("Se incarca 123")
+        .addClass("komponent-overlay")
+        .data("asd", instance)
+        .attr("style", "background: linear-gradient(135deg,rgb(191, 225, 205),rgb(236, 234, 232) 70%, #fca); text-align: center; position:absolute; z-index:100000;")
+    return overlay;
 }

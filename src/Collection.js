@@ -85,9 +85,21 @@ export class Collection {
             throw new Error("Invalid navigations type. Should be page or scroll");
         }
 
-        this.storage = opts.hasOwnProperty("storage") ? opts.storage : (
-            opts.hasOwnProperty("ajaxOpts") ? new Storage(opts.ajaxOpts) : new Storage()
-        );
+        this.storage = opts.hasOwnProperty("storage")
+            ? opts.storage
+            : new Storage(
+                  (() => {
+                      const storageOpts = Object.assign({}, opts.ajaxOpts || {});
+                      if (opts.headers && typeof opts.headers === "object") {
+                          storageOpts.headers = Object.assign(
+                              {},
+                              storageOpts.headers || {},
+                              opts.headers
+                          );
+                      }
+                      return storageOpts;
+                  })()
+              );
 
         if (typeof opts.listeners === "object") {
             for (let event in opts.listeners) {
@@ -497,7 +509,7 @@ export class Collection {
      * @private
      */
     loadFromDataSource() {
-        const overlay = createOverlay();
+        const overlay = createOverlay(this);
         let loader = null;
 
         if (this.view && this.view.el) {
@@ -510,6 +522,7 @@ export class Collection {
 
         return new Promise((resolve, reject) => {
             if (!this.url) {
+                loader.remove();
                 reject(new Error("No valid URL provided"));
                 return;
             }
@@ -549,14 +562,17 @@ export class Collection {
                     if (error instanceof Error && error.jqXHR) {
                         // New error format (KViewsHttpError)
                         this.fail(error.jqXHR, error.textStatus || 'error', error.errorThrown || error);
+                        loader.remove();
                         reject(error);
                     } else if (error && error.jqXHR) {
                         // Old error format (backward compatibility - plain object)
                         this.fail(error.jqXHR, error.textStatus, error.errorThrown);
+                        loader.remove();
                         reject(error);
                     } else {
                         // Plain Error instance or other error
                         this.fail(null, 'error', error);
+                        loader.remove();
                         reject(error);
                     }
                 });
@@ -574,7 +590,7 @@ export class Collection {
      * On update callback
      */
     onupdate() {
-        dbg("onupdate");
+        console.log("onupdate");
         this._trigger('update', this);
         return this;
     }

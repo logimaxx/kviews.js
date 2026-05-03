@@ -1,5 +1,6 @@
 import { parseOptions } from './utils.js';
 import { KViewsHttpError, KViewsNetworkError } from './errors.js';
+import { apiBaseConfig, resolveRequestUrl } from './apiBase.js';
 
 /**
  * Storage class for HTTP operations
@@ -25,23 +26,24 @@ export class Storage {
             options.url = options.url.toString();
         }
         
-        // Check for KViews baseUrl (global or imported)
-        let KViewsRef;
-        if (typeof global !== 'undefined' && global.KViews) {
-            KViewsRef = global.KViews;
-        } else if (typeof window !== 'undefined' && window.KViews) {
-            KViewsRef = window.KViews;
-        } else if (typeof KViews !== 'undefined') {
-            KViewsRef = KViews;
-        }
-        
-        if (KViewsRef && KViewsRef.baseUrl) {
-            options.url = KViewsRef.baseUrl + options.url;
-        }
+        options.url = resolveRequestUrl(options.url);
         options = Object.assign(
             Object.assign({}, this.defaultOptions),
             parseOptions(options)
         );
+
+        // Merge headers: global (KViews.defaultHeaders) < Storage defaults < this sync call
+        const globalHeaders =
+            apiBaseConfig.defaultHeaders && typeof apiBaseConfig.defaultHeaders === "object"
+                ? apiBaseConfig.defaultHeaders
+                : {};
+        const defaultHeaders =
+            this.defaultOptions.headers && typeof this.defaultOptions.headers === "object"
+                ? this.defaultOptions.headers
+                : {};
+        const requestHeaders =
+            options.headers && typeof options.headers === "object" ? options.headers : {};
+        options.headers = Object.assign({}, globalHeaders, defaultHeaders, requestHeaders);
 
         if (!options.hasOwnProperty("url")) {
             throw new Error("No URL provided");

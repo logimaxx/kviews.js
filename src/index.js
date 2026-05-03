@@ -4,6 +4,7 @@
  */
 
 import { KViews } from './KViews.js';
+import { apiBaseConfig } from './apiBase.js';
 export { Item } from './Item.js';
 export { Collection } from './Collection.js';
 export { ItemView } from './ItemView.js';
@@ -49,8 +50,40 @@ if (typeof $ !== "undefined" && $.fn) {
         }
     };
 
-    $.fn.kviews.baseUrl = null;
-    KViews.baseUrl = null;
+    Object.defineProperty($.fn.kviews, "baseUrl", {
+        enumerable: true,
+        configurable: true,
+        get() {
+            return apiBaseConfig.baseUrl;
+        },
+        set(v) {
+            apiBaseConfig.baseUrl = v;
+        },
+    });
+    Object.defineProperty($.fn.kviews, "basePath", {
+        enumerable: true,
+        configurable: true,
+        get() {
+            return apiBaseConfig.basePath;
+        },
+        set(v) {
+            apiBaseConfig.basePath = v;
+        },
+    });
+    Object.defineProperty($.fn.kviews, "defaultHeaders", {
+        enumerable: true,
+        configurable: true,
+        get() {
+            return apiBaseConfig.defaultHeaders;
+        },
+        set(v) {
+            if (v && typeof v === "object" && !Array.isArray(v)) {
+                apiBaseConfig.defaultHeaders = v;
+            } else {
+                apiBaseConfig.defaultHeaders = {};
+            }
+        },
+    });
 
     // Helper methods
     $.fn.kviewsCollection = function (opts) {

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Storage } from '../../src/Storage.js';
+import { apiBaseConfig } from '../../src/apiBase.js';
 
 describe('Storage', () => {
     let storage;
@@ -9,6 +10,7 @@ describe('Storage', () => {
         storage = new Storage();
         mockFetch = vi.fn();
         global.fetch = mockFetch;
+        apiBaseConfig.defaultHeaders = {};
     });
 
     describe('read', () => {
@@ -112,12 +114,10 @@ describe('Storage', () => {
         });
     });
 
-    describe('baseUrl handling', () => {
+    describe('baseUrl / basePath handling', () => {
         it('should prepend baseUrl if set', async () => {
-            // Import KViews to set baseUrl
             const { KViews } = await import('../../src/KViews.js');
             KViews.baseUrl = 'https://api.example.com';
-            global.KViews = KViews; // Make it available globally
 
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -133,10 +133,132 @@ describe('Storage', () => {
                 'https://api.example.com/api/posts',
                 expect.any(Object)
             );
-            
-            // Cleanup
+
             KViews.baseUrl = null;
-            delete global.KViews;
+        });
+
+        it('should prepend basePath when baseUrl is unset', async () => {
+            const { KViews } = await import('../../src/KViews.js');
+            KViews.basePath = '/api/v2';
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{}')
+            });
+
+            await storage.read({}, '/users', {});
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                '/api/v2/users',
+                expect.any(Object)
+            );
+
+            KViews.basePath = null;
+        });
+
+        it('should prefer baseUrl over basePath when both set', async () => {
+            const { KViews } = await import('../../src/KViews.js');
+            KViews.baseUrl = 'https://a.example.com';
+            KViews.basePath = '/ignored';
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{}')
+            });
+
+            await storage.read({}, 'x', {});
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://a.example.com/x',
+                expect.any(Object)
+            );
+
+            KViews.baseUrl = null;
+            KViews.basePath = null;
+        });
+
+        it('merges constructor headers with per-request headers', async () => {
+            const s = new Storage({
+                headers: { Authorization: 'Bearer a', 'X-App': '1' }
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{}')
+            });
+
+            await s.read({}, '/api/x', { headers: { Authorization: 'Bearer b' } });
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                '/api/x',
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: 'Bearer b',
+                        'X-App': '1'
+                    })
+                })
+            );
+        });
+
+        it('merges global defaultHeaders, Storage defaults, and per-request headers', async () => {
+            apiBaseConfig.defaultHeaders = {
+                Authorization: 'Bearer global',
+                'X-Global': '1'
+            };
+            const s = new Storage({
+                headers: { Authorization: 'Bearer instance', 'X-App': '2' }
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{}')
+            });
+
+            await s.read({}, '/api/x', { headers: { 'X-Request': '3' } });
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                '/api/x',
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: 'Bearer instance',
+                        'X-Global': '1',
+                        'X-App': '2',
+                        'X-Request': '3'
+                    })
+                })
+            );
+        });
+
+        it('should not prepend for absolute http(s) URLs', async () => {
+            const { KViews } = await import('../../src/KViews.js');
+            KViews.baseUrl = 'https://api.example.com';
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                text: () => Promise.resolve('{}')
+            });
+
+            await storage.read({}, 'https://other.example.com/z', {});
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://other.example.com/z',
+                expect.any(Object)
+            );
+
+            KViews.baseUrl = null;
         });
     });
 });

@@ -3,8 +3,9 @@ import { KViews } from '../../src/KViews.js';
 
 describe('KViews', () => {
     beforeEach(() => {
-        // Reset baseUrl before each test
         KViews.baseUrl = null;
+        KViews.basePath = null;
+        KViews.defaultHeaders = {};
     });
 
     describe('Static Properties', () => {
@@ -15,6 +16,35 @@ describe('KViews', () => {
 
         it('should set baseUrl', () => {
             KViews.baseUrl = 'https://api.example.com';
+            expect(KViews.baseUrl).toBe('https://api.example.com');
+        });
+
+        it('should have basePath property', () => {
+            expect(KViews.basePath).toBeDefined();
+            expect(KViews.basePath).toBeNull();
+        });
+
+        it('should set basePath', () => {
+            KViews.basePath = '/api/v1';
+            expect(KViews.basePath).toBe('/api/v1');
+        });
+
+        it('should expose defaultHeaders as an object', () => {
+            expect(KViews.defaultHeaders).toBeDefined();
+            expect(typeof KViews.defaultHeaders).toBe('object');
+            expect(KViews.defaultHeaders).toEqual({});
+        });
+
+        it('should set defaultHeaders and reset with null', () => {
+            KViews.defaultHeaders = { Authorization: 'Bearer x' };
+            expect(KViews.defaultHeaders.Authorization).toBe('Bearer x');
+            KViews.defaultHeaders = null;
+            expect(KViews.defaultHeaders).toEqual({});
+        });
+
+        it('should not clear baseUrl when constructing KViews', () => {
+            KViews.baseUrl = 'https://api.example.com';
+            new KViews();
             expect(KViews.baseUrl).toBe('https://api.example.com');
         });
 

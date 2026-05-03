@@ -1,4 +1,5 @@
 import { dbg, log, parseOptions, template } from './utils.js';
+import { apiBaseConfig } from './apiBase.js';
 import { Collection } from './Collection.js';
 import { Item } from './Item.js';
 import { CollectionView } from './CollectionView.js';
@@ -11,11 +12,6 @@ import { Sorting } from './Sorting.js';
  * Main KViews class - factory for creating Item and Collection instances
  */
 export class KViews {
-    constructor() {
-        // Static properties
-        KViews.baseUrl = null;
-    }
-
     /**
      * Helper: Extract and merge options from element and parameters
      */
@@ -71,7 +67,8 @@ export class KViews {
                 'url', 'updateUrl', 'deleteUrl', 'insertUrl',
                 'template', 'type', 'pageSize', 'offset',
                 'emptyview', 'filter', 'paging', 'addontop',
-                'uievents', 'setAttrAsId', 'itemListeners', 'itemOn'
+                'uievents', 'setAttrAsId', 'itemListeners', 'itemOn',
+                'headers'
             ];
             
             // Update URL if provided
@@ -92,7 +89,15 @@ export class KViews {
             
             // Apply only safe updates
             Object.assign(existingInstance, safeUpdates);
-            
+
+            if (safeUpdates.headers && existingInstance.storage && existingInstance.storage.defaultOptions) {
+                existingInstance.storage.defaultOptions.headers = Object.assign(
+                    {},
+                    existingInstance.storage.defaultOptions.headers || {},
+                    safeUpdates.headers
+                );
+            }
+
             return existingInstance;
         }
 
@@ -253,7 +258,8 @@ export class KViews {
         let templateTxt = null;
 
         if ($(el).length) {
-            templateTxt = el[0] ? el[0].outerHTML : el.outerHTML;
+            var node = $(el)[0];
+            templateTxt = node ? node.outerHTML : null;
         }
 
         if (templateTxt) {
@@ -287,5 +293,39 @@ export class KViews {
     static helpers = utilities;
 }
 
-// Export static baseUrl
-KViews.baseUrl = null;
+Object.defineProperty(KViews, "baseUrl", {
+    enumerable: true,
+    configurable: true,
+    get() {
+        return apiBaseConfig.baseUrl;
+    },
+    set(v) {
+        apiBaseConfig.baseUrl = v;
+    },
+});
+
+Object.defineProperty(KViews, "basePath", {
+    enumerable: true,
+    configurable: true,
+    get() {
+        return apiBaseConfig.basePath;
+    },
+    set(v) {
+        apiBaseConfig.basePath = v;
+    },
+});
+
+Object.defineProperty(KViews, "defaultHeaders", {
+    enumerable: true,
+    configurable: true,
+    get() {
+        return apiBaseConfig.defaultHeaders;
+    },
+    set(v) {
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+            apiBaseConfig.defaultHeaders = v;
+        } else {
+            apiBaseConfig.defaultHeaders = {};
+        }
+    },
+});

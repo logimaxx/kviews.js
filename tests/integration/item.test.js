@@ -8,6 +8,7 @@ describe('Item Integration', () => {
         mockFetch = vi.fn();
         global.fetch = mockFetch;
         KViews.baseUrl = null;
+        KViews.basePath = null;
     });
 
     it('should load and render item', async () => {

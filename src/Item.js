@@ -31,7 +31,21 @@ export class Item {
             throw new Error("Error on Item init", e);
         }
 
-        this.storage = options.storage || new Storage();
+        this.storage =
+            options.storage ||
+            new Storage(
+                (() => {
+                    const storageOpts = Object.assign({}, options.ajaxOpts || {});
+                    if (options.headers && typeof options.headers === "object") {
+                        storageOpts.headers = Object.assign(
+                            {},
+                            storageOpts.headers || {},
+                            options.headers
+                        );
+                    }
+                    return storageOpts;
+                })()
+            );
 
         let render = false;
         // Load initial data if provided (before URL setup)
@@ -445,6 +459,36 @@ export class Item {
      * @returns {Object} Render context object safe for template rendering
      */
     getRenderContext() {
+        
+        function copyntransform(obj,wd=0) {
+            if(wd>5) {
+                return null;
+            }
+            // console.log("debugggg",obj);
+            if(!obj) {
+                return null;
+            }
+            if(!obj?.attributes)  {
+                return {id:obj.id};
+            }
+            const result = Object.assign({ id: obj.id }, obj?.attributes ?? { id: obj.id });
+            Object.keys(obj?.relationships??{}).forEach(relName => {
+                // console.log("debugggg Enter relation",relName,obj.relationships[relName]);
+                if(Array.isArray(obj.relationships[relName])) {
+                    // console.log("debugggg Enter relation array",relName,obj.relationships[relName]);
+                    result[relName] = obj.relationships[relName].map(item => copyntransform(item,wd+1))
+                }
+                else {
+                    // console.log("debugggg Enter relation object",relName,obj.relationships[relName]);
+                    result[relName]=copyntransform(obj.relationships[relName],wd);
+                }
+            });
+            return result;
+        }
+        const tmp = copyntransform(this,0);
+        // console.log("debugggg result",this,tmp);
+        return tmp;
+
         // Create a shallow copy of attributes (exposed directly in template)
         const context = Object.assign({}, this.attributes);
         
@@ -462,20 +506,14 @@ export class Item {
                     context[relName] = rel.map(item => {
                         if (item && typeof item === 'object' && item.attributes) {
                             // Item-like object: flatten to { id, type, ...attributes }
-                            return Object.assign({}, item.attributes, {
-                                id: item.id,
-                                type: item.type
-                            });
+                            return Object.assign({}, item.attributes);
                         }
                         // Already plain object or primitive
                         return item;
                     });
                 } else if (rel && typeof rel === 'object' && rel.attributes) {
                     // To-one: Flatten to { id, type, ...attributes }
-                    context[relName] = Object.assign({}, rel.attributes, {
-                        id: rel.id,
-                        type: rel.type
-                    });
+                    context[relName] = Object.assign({}, rel.attributes);
                 } else {
                     // Fallback: plain object or primitive (create copy if object)
                     context[relName] = (typeof rel === 'object' && rel !== null) 
@@ -485,14 +523,7 @@ export class Item {
             });
         }
         
-        // // Add id and type for template access
-        // if (this.id !== null && this.id !== undefined) {
-        //     context.id = this.id;
-        // }
-        // if (this.type) {
-        //     context.type = this.type;
-        // }
-        
+  
         return context;
     }
 
@@ -608,23 +639,30 @@ export class Item {
 
         // To-one relationship: runtime object -> { data: { type, id } }
         if (rel && typeof rel === 'object' && !Array.isArray(rel)) {
-            if (rel.type && rel.id) {
+            if (rel.id) {
                 // Runtime object with type/id
-                return {
+                const result = {
                     data: {
-                        type: rel.type,
                         id: rel.id
                     }
                 };
+                if(rel.type) {
+                    result.data.type = rel.type;
+                }
+                return result;
             } else if (rel.hasOwnProperty('toJSON')) {
                 // Item instance - extract type/id from toJSON result
                 const json = rel.toJSON();
-                return {
+                const result = {
                     data: {
-                        type: json.type,
                         id: json.id
                     }
                 };
+                if(json.type) {
+                    result.data.type = json.type;
+                }
+                return result;
+
             } else {
                 // Unknown format - return null (can't serialize)
                 return { data: null };
@@ -638,17 +676,24 @@ export class Item {
                     if (item && typeof item === 'object') {
                         if (item.type && item.id) {
                             // Runtime object with type/id
-                            return {
-                                type: item.type,
+                            const result = {
                                 id: item.id
-                            };
+                            }
+                            if(item.type) {
+                                result.type = item.type;
+                            }
+                            return result;
                         } else if (item.hasOwnProperty('toJSON')) {
                             // Item instance - extract type/id
                             const json = item.toJSON();
-                            return {
+                            const result = {
                                 type: json.type,
                                 id: json.id
                             };
+                            if(json.type) {
+                                result.type = json.type;
+                            }
+                            return result;
                         }
                     }
                     // Fallback: return as-is (may be invalid)
@@ -737,37 +782,39 @@ export class Item {
                 // Convert URL object to string for Storage
                 let updateUrlString = this.updateUrl.toString ? this.updateUrl.toString() : this.updateUrl;
                 
-                this.storage.update(this, updateUrlString, {}, patchData)
+                this.storage
+                    .update(this, updateUrlString, {}, patchData)
                     .then((resp) => {
-                    // Parse and hydrate item data (relationships are resolved)
-                    let newData = parseItemData(resp.data);
-                    Object.assign(this, newData);
-                    this.shadow = null;
+                        // Parse and hydrate item data (relationships are resolved)
+                        let newData = parseItemData(resp.data);
+                        Object.assign(this, newData);
+                        this.shadow = null;
 
-                    if (options.rerender) {
-                        this.views.forEach((view) => {
-                            view.render();
-                        });
-                    }
+                        if (options.rerender) {
+                            this.views.forEach((view) => {
+                                view.render();
+                                this._trigger('afterrender', this,view);                                
+                            });
+                        }
 
-                    this._trigger('update', this);
+                        this._trigger('update', this);
 
-                    if (this.collection) {
-                        this.collection.onupdate();
-                    }
-                    resolve(this);
-                })
-                .catch((error) => {
-                    dbg("Update NOK", this.updateUrl, patchData, error);
-                    // Handle both old error format and new Error instances
-                    if (error instanceof Error && error.jqXHR) {
-                        reject(error);
-                    } else if (error.jqXHR) {
-                        reject(error);
-                    } else {
-                        reject(error instanceof Error ? error : new Error(String(error)));
-                    }
-                });
+                        if (this.collection) {
+                            this.collection.onupdate();
+                        }
+                        resolve(this);
+                    })
+                    .catch((error) => {
+                        dbg("Update NOK", this.updateUrl, patchData, error);
+                        // Handle both old error format and new Error instances
+                        if (error instanceof Error && error.jqXHR) {
+                            reject(error);
+                        } else if (error.jqXHR) {
+                            reject(error);
+                        } else {
+                            reject(error instanceof Error ? error : new Error(String(error)));
+                        }
+                    });
         });
     }
 
@@ -832,7 +879,7 @@ export class Item {
             }
 
             // rel is to-one (object or null)
-            if (typeof data === "object" && data !== null) {
+            if (typeof data === "object" || data === null) {
                 // Data is object - load as Item instance (runtime object)
                 dbg("Update 1:1 relation");
                 let item = new Item().loadFromData(data);
@@ -842,6 +889,7 @@ export class Item {
 
             // Data is id string
             if (typeof data === "string" || typeof data === "number") {
+                dbg("Update 1:1 relation with id", data);
                 // If current rel matches id, keep it
                 if (rel && rel.id && (rel.id === data || String(rel.id) === String(data))) {
                     return rel;
@@ -850,10 +898,13 @@ export class Item {
                 // Otherwise, create a minimal runtime object with just id
                 // (type will be inferred or set elsewhere)
                 // This maintains runtime format, not JSON:API wrapper format
-                return {
+                const newRel = {
                     id: String(data),
-                    type: rel && rel.type ? rel.type : null
-                };
+                }
+                if(rel && rel.type) {
+                    newRel.type = rel.type;
+                }
+                return newRel;
             }
 
             // Unknown format - return as-is
@@ -895,6 +946,8 @@ export class Item {
             }
         });
 
+        dbg("updateOptions", updateOptions);
+
         if (updateOptions.sync) {
             return this.perform_update(updateOptions);
         }
@@ -930,6 +983,8 @@ export class Item {
                     this._trigger('remove', this);
                     // Trigger collection update event once (removeItem() no longer triggers it)
                     if (collection) {
+                        console.log("removed");
+                        
                         collection.onupdate();
                     }
                 })

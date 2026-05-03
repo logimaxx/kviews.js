@@ -6,6 +6,7 @@ import { Collection } from '../../src/Collection.js';
 describe('Bug Fixes', () => {
     beforeEach(() => {
         KViews.baseUrl = null;
+        KViews.basePath = null;
         // Mock fetch
         global.fetch = vi.fn(() => Promise.resolve({
             ok: true,

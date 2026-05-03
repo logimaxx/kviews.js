@@ -99,6 +99,8 @@ export class ItemView {
         try {
             // Use getRenderContext() to get safe render data without mutating item state
             const renderContext = this.item.getRenderContext();
+            console.log("renderContext",renderContext);
+            
             let html = this.template(renderContext);
             el = $(html)
                 .attr("data-type", "item")
@@ -106,7 +108,7 @@ export class ItemView {
                 .data("view", this)
                 .data("instance", this.item);
         } catch (e) {
-            dbg("Error create view from template", e, this.item);
+            console.log("Error create view from template", e, this.item);
             el = $("<div>Could not render view: <strong>" + e.toString() + "</strong></div>");
         }
         

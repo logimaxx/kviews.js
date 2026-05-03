@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.0.0
- * Built: 2026-03-17T11:44:31.799Z
+ * Built: 2026-05-03T17:29:24.261Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -30,7 +30,7 @@ var KViews = (() => {
     Filtering: () => Filtering,
     Item: () => Item,
     ItemView: () => ItemView,
-    KViews: () => KViews2,
+    KViews: () => KViews,
     Paging: () => Paging,
     Sorting: () => Sorting,
     Storage: () => Storage,
@@ -160,8 +160,34 @@ var KViews = (() => {
     }
     throw new Error("Handlebars is required for template compilation");
   }
-  function createOverlay() {
-    return $("<div>").text("Se incarca").addClass("komponent-overlay").attr("style", "background: silver; text-align: center;position:absolute; z-index:100000");
+  function createOverlay(instance) {
+    return $("<div>").text("Se incarca 123").addClass("komponent-overlay").data("asd", instance).attr("style", "background: linear-gradient(135deg,rgb(191, 225, 205),rgb(236, 234, 232) 70%, #fca); text-align: center; position:absolute; z-index:100000;");
+    return overlay;
+  }
+
+  // src/apiBase.js
+  var apiBaseConfig = {
+    baseUrl: null,
+    basePath: null
+  };
+  function resolveRequestUrl(url) {
+    if (url == null || url === "") {
+      return url;
+    }
+    const s = typeof url === "string" ? url : String(url);
+    if (/^https?:\/\//i.test(s) || s.startsWith("//")) {
+      return s;
+    }
+    const base = apiBaseConfig.baseUrl || apiBaseConfig.basePath || "";
+    if (!base) {
+      return s;
+    }
+    const baseNorm = base.replace(/\/+$/, "");
+    const pathNorm = s.replace(/^\/+/, "");
+    if (!pathNorm) {
+      return baseNorm + "/";
+    }
+    return baseNorm + "/" + pathNorm;
   }
 
   // src/errors.js
@@ -395,17 +421,7 @@ var KViews = (() => {
       if (options.url && typeof options.url === "object" && options.url.toString) {
         options.url = options.url.toString();
       }
-      let KViewsRef;
-      if (typeof global !== "undefined" && global.KViews) {
-        KViewsRef = global.KViews;
-      } else if (typeof window !== "undefined" && window.KViews) {
-        KViewsRef = window.KViews;
-      } else if (typeof KViews !== "undefined") {
-        KViewsRef = KViews;
-      }
-      if (KViewsRef && KViewsRef.baseUrl) {
-        options.url = KViewsRef.baseUrl + options.url;
-      }
+      options.url = resolveRequestUrl(options.url);
       options = Object.assign(
         Object.assign({}, this.defaultOptions),
         parseOptions(options)
@@ -849,10 +865,11 @@ var KViews = (() => {
       let el;
       try {
         const renderContext = this.item.getRenderContext();
+        console.log("renderContext", renderContext);
         let html = this.template(renderContext);
         el = $(html).attr("data-type", "item").attr("id", this.id).data("view", this).data("instance", this.item);
       } catch (e) {
-        dbg("Error create view from template", e, this.item);
+        console.log("Error create view from template", e, this.item);
         el = $("<div>Could not render view: <strong>" + e.toString() + "</strong></div>");
       }
       return el;
@@ -1150,11 +1167,11 @@ var KViews = (() => {
      */
     loadFromDataSource() {
       let loaders = [];
-      const overlay = createOverlay();
+      const overlay2 = createOverlay();
       this.views.forEach((itemView) => {
         if (itemView.el) {
           let $el = $(itemView.el);
-          let loader = overlay.clone();
+          let loader = overlay2.clone();
           loader.insertBefore(itemView.el).width($el.width()).height($el.height());
           loaders.push(loader);
         }
@@ -1340,6 +1357,28 @@ var KViews = (() => {
      * @returns {Object} Render context object safe for template rendering
      */
     getRenderContext() {
+      function copyntransform(obj, wd = 0) {
+        if (wd > 5) {
+          return null;
+        }
+        if (!obj) {
+          return null;
+        }
+        if (!obj?.attributes) {
+          return { id: obj.id };
+        }
+        const result = Object.assign({ id: obj.id }, obj?.attributes ?? { id: obj.id });
+        Object.keys(obj?.relationships ?? {}).forEach((relName) => {
+          if (Array.isArray(obj.relationships[relName])) {
+            result[relName] = obj.relationships[relName].map((item) => copyntransform(item, wd + 1));
+          } else {
+            result[relName] = copyntransform(obj.relationships[relName], wd);
+          }
+        });
+        return result;
+      }
+      const tmp = copyntransform(this, 0);
+      return tmp;
       const context = Object.assign({}, this.attributes);
       if (this.relationships) {
         Object.getOwnPropertyNames(this.relationships).forEach((relName) => {
@@ -1349,18 +1388,12 @@ var KViews = (() => {
           } else if (Array.isArray(rel)) {
             context[relName] = rel.map((item) => {
               if (item && typeof item === "object" && item.attributes) {
-                return Object.assign({}, item.attributes, {
-                  id: item.id,
-                  type: item.type
-                });
+                return Object.assign({}, item.attributes);
               }
               return item;
             });
           } else if (rel && typeof rel === "object" && rel.attributes) {
-            context[relName] = Object.assign({}, rel.attributes, {
-              id: rel.id,
-              type: rel.type
-            });
+            context[relName] = Object.assign({}, rel.attributes);
           } else {
             context[relName] = typeof rel === "object" && rel !== null ? Object.assign({}, rel) : rel;
           }
@@ -1456,21 +1489,27 @@ var KViews = (() => {
         return { data: null };
       }
       if (rel && typeof rel === "object" && !Array.isArray(rel)) {
-        if (rel.type && rel.id) {
-          return {
+        if (rel.id) {
+          const result = {
             data: {
-              type: rel.type,
               id: rel.id
             }
           };
+          if (rel.type) {
+            result.data.type = rel.type;
+          }
+          return result;
         } else if (rel.hasOwnProperty("toJSON")) {
           const json = rel.toJSON();
-          return {
+          const result = {
             data: {
-              type: json.type,
               id: json.id
             }
           };
+          if (json.type) {
+            result.data.type = json.type;
+          }
+          return result;
         } else {
           return { data: null };
         }
@@ -1480,16 +1519,23 @@ var KViews = (() => {
           data: rel.map((item) => {
             if (item && typeof item === "object") {
               if (item.type && item.id) {
-                return {
-                  type: item.type,
+                const result = {
                   id: item.id
                 };
+                if (item.type) {
+                  result.type = item.type;
+                }
+                return result;
               } else if (item.hasOwnProperty("toJSON")) {
                 const json = item.toJSON();
-                return {
+                const result = {
                   type: json.type,
                   id: json.id
                 };
+                if (json.type) {
+                  result.type = json.type;
+                }
+                return result;
               }
             }
             return item;
@@ -1565,6 +1611,7 @@ var KViews = (() => {
           if (options.rerender) {
             this.views.forEach((view) => {
               view.render();
+              this._trigger("afterrender", this, view);
             });
           }
           this._trigger("update", this);
@@ -1620,20 +1667,24 @@ var KViews = (() => {
           dbg("to fix: array relationship update");
           return rel;
         }
-        if (typeof data === "object" && data !== null) {
+        if (typeof data === "object" || data === null) {
           dbg("Update 1:1 relation");
           let item = new _Item().loadFromData(data);
           dbg("relation", item);
           return item;
         }
         if (typeof data === "string" || typeof data === "number") {
+          dbg("Update 1:1 relation with id", data);
           if (rel && rel.id && (rel.id === data || String(rel.id) === String(data))) {
             return rel;
           }
-          return {
-            id: String(data),
-            type: rel && rel.type ? rel.type : null
+          const newRel = {
+            id: String(data)
           };
+          if (rel && rel.type) {
+            newRel.type = rel.type;
+          }
+          return newRel;
         }
         return rel;
       };
@@ -1665,6 +1716,7 @@ var KViews = (() => {
           this.attributes[attrName] = updateData[attrName];
         }
       });
+      dbg("updateOptions", updateOptions);
       if (updateOptions.sync) {
         return this.perform_update(updateOptions);
       }
@@ -1694,6 +1746,7 @@ var KViews = (() => {
         Promise.all(ps).then(() => {
           this._trigger("remove", this);
           if (collection) {
+            console.log("removed");
             collection.onupdate();
           }
         }).finally(() => resolve());
@@ -2480,14 +2533,15 @@ var KViews = (() => {
      * @private
      */
     loadFromDataSource() {
-      const overlay = createOverlay();
+      const overlay2 = createOverlay(this);
       let loader = null;
       if (this.view && this.view.el) {
-        loader = $(overlay).clone().insertBefore(this.view.el).width($(this.view.el).width()).height($(this.view.el).height());
+        loader = $(overlay2).clone().insertBefore(this.view.el).width($(this.view.el).width()).height($(this.view.el).height());
       }
       this._trigger("beforeload", this);
       return new Promise((resolve, reject) => {
         if (!this.url) {
+          loader.remove();
           reject(new Error("No valid URL provided"));
           return;
         }
@@ -2514,12 +2568,15 @@ var KViews = (() => {
         }).catch((error2) => {
           if (error2 instanceof Error && error2.jqXHR) {
             this.fail(error2.jqXHR, error2.textStatus || "error", error2.errorThrown || error2);
+            loader.remove();
             reject(error2);
           } else if (error2 && error2.jqXHR) {
             this.fail(error2.jqXHR, error2.textStatus, error2.errorThrown);
+            loader.remove();
             reject(error2);
           } else {
             this.fail(null, "error", error2);
+            loader.remove();
             reject(error2);
           }
         });
@@ -2535,7 +2592,7 @@ var KViews = (() => {
      * On update callback
      */
     onupdate() {
-      dbg("onupdate");
+      console.log("onupdate");
       this._trigger("update", this);
       return this;
     }
@@ -2959,10 +3016,7 @@ var KViews = (() => {
   };
 
   // src/KViews.js
-  var KViews2 = class _KViews {
-    constructor() {
-      _KViews.baseUrl = null;
-    }
+  var KViews = class _KViews {
     /**
      * Helper: Extract and merge options from element and parameters
      */
@@ -3139,7 +3193,8 @@ var KViews = (() => {
       options.template = null;
       let templateTxt = null;
       if ($(el).length) {
-        templateTxt = el[0] ? el[0].outerHTML : el.outerHTML;
+        var node = $(el)[0];
+        templateTxt = node ? node.outerHTML : null;
       }
       if (templateTxt) {
         templateTxt = templateTxt.replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&apos;/gi, "'").replace(/&quot;/gi, '"').replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&");
@@ -3159,12 +3214,31 @@ var KViews = (() => {
     }
     static helpers = utilities;
   };
-  KViews2.baseUrl = null;
+  Object.defineProperty(KViews, "baseUrl", {
+    enumerable: true,
+    configurable: true,
+    get() {
+      return apiBaseConfig.baseUrl;
+    },
+    set(v) {
+      apiBaseConfig.baseUrl = v;
+    }
+  });
+  Object.defineProperty(KViews, "basePath", {
+    enumerable: true,
+    configurable: true,
+    get() {
+      return apiBaseConfig.basePath;
+    },
+    set(v) {
+      apiBaseConfig.basePath = v;
+    }
+  });
 
   // src/index.js
-  var index_default = KViews2;
+  var index_default = KViews;
   if (typeof window !== "undefined") {
-    window.KViews = KViews2;
+    window.KViews = KViews;
   }
   if (typeof $ !== "undefined" && $.fn) {
     $.fn.kviews = function(opts) {
@@ -3179,13 +3253,31 @@ var KViews = (() => {
         }
       }
       if (resourcetype === "item") {
-        return KViews2.createItemInstance(el, opts);
+        return KViews.createItemInstance(el, opts);
       } else {
-        return KViews2.createCollectionInstance(el, opts);
+        return KViews.createCollectionInstance(el, opts);
       }
     };
-    $.fn.kviews.baseUrl = null;
-    KViews2.baseUrl = null;
+    Object.defineProperty($.fn.kviews, "baseUrl", {
+      enumerable: true,
+      configurable: true,
+      get() {
+        return apiBaseConfig.baseUrl;
+      },
+      set(v) {
+        apiBaseConfig.baseUrl = v;
+      }
+    });
+    Object.defineProperty($.fn.kviews, "basePath", {
+      enumerable: true,
+      configurable: true,
+      get() {
+        return apiBaseConfig.basePath;
+      },
+      set(v) {
+        apiBaseConfig.basePath = v;
+      }
+    });
     $.fn.kviewsCollection = function(opts) {
       let options = {
         resourcetype: "collection"
@@ -3217,6 +3309,6 @@ var KViews = (() => {
       return this.kviews(opts);
     };
   }
-  return KViews2;
+  return __toCommonJS(index_exports);
 })();
 //# sourceMappingURL=kviews.js.map
