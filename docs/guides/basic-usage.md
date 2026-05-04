@@ -2,6 +2,8 @@
 
 Learn the fundamentals of using KViews in your applications.
 
+**Dependencies:** KViews requires **[jQuery](https://jquery.com/)** and **[Handlebars](https://handlebarsjs.com/)** at runtime. In HTML examples, load **jQuery first**, then **Handlebars**, then the KViews bundle (or add the same globals before your `<script type="module">` that imports `./src/index.js`). With npm, install both as peers: `npm install jquery handlebars`.
+
 ## Usage Methods
 
 KViews can be used in two ways:
@@ -16,6 +18,7 @@ Examples in this guide show both methods.
 ### Using Bundle
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
@@ -29,6 +32,7 @@ Examples in this guide show both methods.
 ### Using ES6 Modules
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
@@ -65,6 +69,8 @@ const collection = KViews.createCollectionInstance('#posts', '/api/posts');
 ### Using Bundle
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     const item = KViews.createItemInstance('#post-detail', {
@@ -137,6 +143,8 @@ Use `KViews.baseUrl` or `KViews.basePath` to prefix relative endpoint paths, and
 
 **Using Bundle:**
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     // Auto-loads on creation
@@ -247,6 +255,14 @@ item.on('remove', (item) => {
 
 ## Templates
 
+### How collections render
+
+For `createCollectionInstance`, the template describes **one item** in the list. KViews walks `collection.items` and renders that markup once per item (see `CollectionView.render`). Your template receives a single item’s render context each time.
+
+Do **not** use Handlebars `{{#each}}` to loop over the whole collection in the template. That is the library’s job. Write one row/card/snippet; KViews repeats it for every loaded item.
+
+Use `{{#each}}` only when a **single item** has a to-many relationship (for example tags on one post). Details are in [Templates](./templates.md).
+
 ### Inline Template
 
 ```html
@@ -254,7 +270,7 @@ item.on('remove', (item) => {
     <div class="post">
         <h2>{{title}}</h2>
         <p>{{content}}</p>
-        <p>Author: {{author.attributes.name}}</p>
+        <p>Author: {{author.name}}</p>
     </div>
 </div>
 ```
@@ -271,6 +287,8 @@ item.on('remove', (item) => {
 
 <div id="posts"></div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -283,6 +301,8 @@ item.on('remove', (item) => {
 ```
 
 ### Custom Template Function
+
+KViews still needs **jQuery** on the page for DOM work; pass a Handlebars-compiled function as `template`.
 
 ```javascript
 import Handlebars from 'handlebars';
@@ -312,6 +332,8 @@ KViews.createCollectionInstance('#posts', {
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -337,6 +359,8 @@ Utilities are available via `KViews.helpers` (recommended) or can be imported di
     <button type="submit">Create</button>
 </form>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     const collection = KViews.createCollectionInstance('#posts', {
@@ -361,6 +385,8 @@ Utilities are available via `KViews.helpers` (recommended) or can be imported di
     <button type="submit">Create</button>
 </form>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -392,6 +418,8 @@ Utilities are available via `KViews.helpers` (recommended) or can be imported di
     <button type="submit">Update</button>
 </form>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     const item = KViews.createItemInstance('#post', '/api/posts/1');
@@ -418,6 +446,8 @@ Utilities are available via `KViews.helpers` (recommended) or can be imported di
     <button type="submit">Update</button>
 </form>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -491,16 +521,20 @@ collection.loadFromRemote();
 </div>
 ```
 
-### Iterating Relationships
+### Iterating relationships (not the collection)
+
+On an **item** view (or the per-item fragment of a collection template), `{{#each}}` is for arrays that belong to that one record—for example a `tags` relationship. That is different from listing collection members; KViews still renders the outer template once per collection item.
 
 ```html
 <div id="post">
     <h2>{{title}}</h2>
     <h3>Tags:</h3>
     <ul>
-        {{#each relationships.tags}}
+        {{#each tags}}
             <li>{{name}}</li>
         {{/each}}
     </ul>
 </div>
 ```
+
+Relationship names and attributes are flattened in the render context; see [Templates](./templates.md).

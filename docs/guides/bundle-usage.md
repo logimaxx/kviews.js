@@ -6,6 +6,8 @@ Learn how to use KViews without ES6 modules using the bundled version.
 
 The bundle (`dist/kviews.js`) is a single JavaScript file that includes all KViews functionality. It doesn't require a module system and works in any browser.
 
+**Dependencies:** The bundle does **not** embed jQuery or Handlebars. You must load **[jQuery](https://jquery.com/)** and **[Handlebars](https://handlebarsjs.com/)** yourself, in that order, before `kviews.js`.
+
 ## Advantages
 
 - ✅ **No module system required** - Works with plain `<script>` tags
@@ -93,12 +95,13 @@ const item = KViews.createItemInstance('#post', {
 });
 ```
 
-## jQuery Plugin
+## jQuery plugin
 
-If jQuery is loaded, the bundle automatically registers jQuery plugins:
+With jQuery and Handlebars loaded, the bundle registers `$.fn.kviews` helpers:
 
 ```html
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     // jQuery plugin is automatically available
@@ -146,9 +149,9 @@ If jQuery is loaded, the bundle automatically registers jQuery plugins:
         </div>
     </div>
 
-    <!-- Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
+    <!-- Dependencies: jQuery first, then Handlebars -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
     
     <!-- KViews Bundle -->
     <script src="./dist/kviews.js"></script>

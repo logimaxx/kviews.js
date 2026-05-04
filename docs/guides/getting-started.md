@@ -2,6 +2,8 @@
 
 This guide will help you get started with KViews in your project.
 
+KViews depends on **[jQuery](https://jquery.com/)** (global `$`) and **[Handlebars](https://handlebarsjs.com/)** (global `Handlebars`) in the browser. Always load **jQuery first**, then **Handlebars**, then the KViews bundle or your module script.
+
 ## Installation
 
 ### Option 1: Bundle (Recommended for Simple Projects)
@@ -9,6 +11,7 @@ This guide will help you get started with KViews in your project.
 Include the bundled file - no module system required:
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 ```
@@ -20,6 +23,7 @@ KViews will be available globally as `window.KViews`.
 Copy the `src/` directory to your project and import:
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
@@ -80,6 +84,7 @@ Create your HTML with a container element and a template:
 #### Using ES6 Modules
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
@@ -141,6 +146,7 @@ Then open: `http://localhost:8000`
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
     <script src="./dist/kviews.js"></script>
     <script>
@@ -179,6 +185,7 @@ Then open: `http://localhost:8000`
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
     <script type="module">
         import { KViews } from './src/index.js';
@@ -203,6 +210,8 @@ Then open: `http://localhost:8000`
     <p>Author: {{author.attributes.name}}</p>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     KViews.createItemInstance(document.getElementById('post-detail'), {
@@ -221,6 +230,8 @@ Then open: `http://localhost:8000`
     <p>Author: {{author.attributes.name}}</p>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -231,14 +242,17 @@ Then open: `http://localhost:8000`
 </script>
 ```
 
-## Using jQuery Plugin
+## Using jQuery plugin syntax
 
-If jQuery is loaded (works with both bundle and modules), you can use the plugin syntax:
+KViews already requires jQuery. After you load **Handlebars** and **KViews** (bundle or `import './src/index.js'` to register plugins), you can use the optional `$.fn.kviews` shorthand in addition to `KViews.createCollectionInstance` / `createItemInstance`:
 
 ```html
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <!-- or -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import './src/index.js'; // Registers jQuery plugin
 </script>

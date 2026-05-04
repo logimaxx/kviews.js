@@ -1,6 +1,6 @@
 # KViews Documentation
 
-Welcome to the KViews documentation! KViews is a class-based JavaScript library for binding API data to DOM elements, supporting JSON API format.
+Welcome to the KViews documentation! KViews is a class-based JavaScript library for binding API data to DOM elements, supporting JSON API format. **You must provide [jQuery](https://jquery.com/) and [Handlebars](https://handlebarsjs.com/)** in the page (or from your bundler) before KViews runs; load order should be **jQuery → Handlebars → KViews** (or your app bundle that imports KViews after those peers are configured).
 
 ## Documentation Structure
 
@@ -31,6 +31,7 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 </head>
 <body>
@@ -59,6 +60,7 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
     <script src="./dist/kviews.js"></script>
 </head>
@@ -87,7 +89,7 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 - ✅ **JSON API support** - Full JSON API format support
 - ✅ **Template rendering** - Handlebars template support
 - ✅ **Event system** - Comprehensive event handling
-- ✅ **jQuery optional** - Works with or without jQuery
+- ✅ **jQuery required** - DOM and selectors rely on global jQuery (`$`)
 - ✅ **Filtering** - Built-in form filtering support
 - ✅ **CRUD operations** - Create, Read, Update, Delete support
 
@@ -96,6 +98,7 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 ### Bundle (No Module System)
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
@@ -109,6 +112,8 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 ### ES6 Modules
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     KViews.createCollectionInstance('#collection', {
@@ -120,9 +125,9 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 
 ## Requirements
 
-- **Handlebars** - Required for template compilation
-- **jQuery** (required) - DOM manipulation
-- **Browser** - Modern browser (bundle works everywhere, ES6 modules require Chrome 61+, Firefox 60+, Safari 11+, Edge 16+)
+- **jQuery** (required) — load first; KViews expects global `$` / `jQuery`
+- **Handlebars** (required) — load second; templates compile with global `Handlebars`
+- **Browser** — Modern browser (bundle works everywhere, ES6 modules require Chrome 61+, Firefox 60+, Safari 11+, Edge 16+)
 
 ## Support
 

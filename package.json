@@ -1,7 +1,7 @@
 {
   "name": "kviews",
   "version": "1.1.2",
-  "description": "Class-based JSON:API data binding for the DOM (collections, items, Handlebars, Fetch)",
+  "description": "Class-based JSON:API data binding for the DOM (jQuery, Handlebars, Fetch; collections and items)",
   "type": "module",
   "main": "./dist/index.js",
   "exports": {

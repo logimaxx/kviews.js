@@ -133,11 +133,13 @@ Include bundle-ul în HTML:
 
 #### Varianta ES6 Modules
 
-Copiază `src/` în proiect sau importă direct:
+Copiază `src/` în proiect sau importă direct. **jQuery** și **Handlebars** trebuie să fie deja încărcate în pagină (ca script-uri globale) înainte de modulul care importă KViews:
 
 ```javascript
 import { KViews } from './path/to/kviews/src/index.js';
 ```
+
+În HTML: `<script src="jquery…">`, apoi `<script src="handlebars…">`, apoi `<script type="module">` cu importul de mai sus.
 
 ---
 

@@ -2,6 +2,8 @@
 
 Learn how to install and set up KViews in your project.
 
+**Runtime:** KViews requires **jQuery** and **Handlebars** in the browser (npm `peerDependencies`). Load **jQuery first**, then **Handlebars**, then `dist/kviews.js` or your module entry.
+
 ## Installation Methods
 
 ### Method 1: Bundle (Recommended for Simple Projects)
@@ -195,10 +197,15 @@ npx esbuild src/index.js --bundle --format=iife --global-name=KViews --outfile=d
 If published to npm and CDN:
 
 ```html
+<!-- jQuery and Handlebars are required before KViews -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <!-- Bundle version -->
 <script src="https://unpkg.com/kviews@latest/dist/kviews.js"></script>
 
 <!-- Or ES6 modules -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from 'https://unpkg.com/kviews@latest/src/index.js';
 </script>
@@ -236,3 +243,7 @@ log('KViews loaded:', KViews);
 ### "Handlebars is not defined"
 - Load Handlebars before KViews
 - Check Handlebars CDN is accessible
+
+### "`$` is not defined" / jQuery errors
+- Load **jQuery** before Handlebars and before KViews (or ensure your bundler provides global `$`)
+- KViews uses jQuery for DOM operations; it is not optional at runtime

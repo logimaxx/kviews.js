@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A modern, class-based JavaScript library for binding JSON API data to DOM elements. KViews provides a clean, declarative way to work with REST APIs and render data using Handlebars templates.
+A modern, class-based JavaScript library for binding JSON API data to DOM elements. KViews provides a clean, declarative way to work with REST APIs and render data using Handlebars templates. **Runtime requirements:** [jQuery](https://jquery.com/) (DOM and selectors) and [Handlebars](https://handlebarsjs.com/) (templates); both are `peerDependencies` when you install from npm.
 
 ## Features
 
@@ -40,6 +40,7 @@ The published package includes `src/` (ESM) and `dist/` (IIFE bundle). Run `npm 
 Download `dist/kviews.js` and include it in your HTML:
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 ```
@@ -54,9 +55,11 @@ Or copy the `src/` directory to your project.
 
 ### Requirements
 
-- **Handlebars** (required) - For template compilation
-- **jQuery** (required) - For DOM manipulation
-- **Modern Browser** - ES6 support (Chrome 61+, Firefox 60+, Safari 11+, Edge 16+)
+Load **jQuery** before **Handlebars**, then KViews (bundle or your module entry), so globals `$` / `jQuery` and `Handlebars` exist when KViews runs.
+
+- **jQuery** (required) — DOM manipulation and selectors throughout the library (`peerDependency`, typically ^3)
+- **Handlebars** (required) — Template compilation (`peerDependency`, typically ^4)
+- **Modern browser** — ES6 support (Chrome 61+, Firefox 60+, Safari 11+, Edge 16+)
 
 ## Quick Start
 
@@ -66,6 +69,7 @@ Or copy the `src/` directory to your project.
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
     <script src="./dist/kviews.js"></script>
 </head>
@@ -93,6 +97,7 @@ Or copy the `src/` directory to your project.
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 </head>
 <body>
@@ -442,7 +447,7 @@ For issues, questions, or contributions:
 ## Acknowledgments
 
 - Built with modern JavaScript (ES6+)
-- Uses [Handlebars](https://handlebarsjs.com/) for templating
+- Uses [jQuery](https://jquery.com/) for DOM APIs and [Handlebars](https://handlebarsjs.com/) for templating
 - Inspired by modern data-binding patterns
 
 ---

@@ -1,7 +1,13 @@
 # Builds the library and deploys the static site under website/ to GitHub Pages.
 #
-# One-time repo setup: Settings → Pages → Build and deployment → Source: GitHub Actions
-# Site URL: https://<org-or-user>.github.io/kviews/
+# One-time repo setup (required or deploy-pages returns 404):
+#   Repo → Settings → Pages → Build and deployment → Source: "GitHub Actions"
+#   (Not "Deploy from a branch".) Save, then re-run this workflow.
+#
+# If deploy still fails: org → Settings → Actions → General → ensure "GitHub Pages"
+# workflows are allowed; for private repos, Pages needs a paid plan on the org.
+#
+# Site URL pattern: https://<org>.github.io/<repo>/  e.g. …/kviews.js/
 
 name: Deploy GitHub Pages
 

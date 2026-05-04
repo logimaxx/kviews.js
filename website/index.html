@@ -85,6 +85,10 @@
       <section>
         <h2>Quick start (ES modules)</h2>
         <div class="card">
+          <p style="margin: 0 0 0.75rem; color: var(--muted)">
+            KViews expects <strong>jQuery</strong> and <strong>Handlebars</strong> as peer dependencies (globals in the
+            browser, or configured in your bundler) before you call the API.
+          </p>
           <pre><code>import KViews from 'kviews';
 
 KViews.createCollectionInstance('#posts', {
@@ -101,8 +105,8 @@ KViews.createCollectionInstance('#posts', {
             On this site, the built files are served from <code>./dist/</code> after each deploy. In your own app you
             can load from npm/CDN instead.
           </p>
-          <pre><code>&lt;script src="path/to/handlebars.min.js"&gt;&lt;/script&gt;
-&lt;script src="path/to/jquery.min.js"&gt;&lt;/script&gt;
+          <pre><code>&lt;script src="path/to/jquery.min.js"&gt;&lt;/script&gt;
+&lt;script src="path/to/handlebars.min.js"&gt;&lt;/script&gt;
 &lt;script src="path/to/kviews.min.js"&gt;&lt;/script&gt;</code></pre>
         </div>
       </section>

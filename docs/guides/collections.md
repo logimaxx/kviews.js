@@ -2,6 +2,8 @@
 
 Learn how to work with collections of items in KViews.
 
+**Runtime:** KViews requires **jQuery** and **Handlebars** (see [Getting Started](./getting-started.md)). In copy-paste snippets, load jQuery, then Handlebars, then `./dist/kviews.js`.
+
 ## What is a Collection?
 
 A Collection represents a list of items fetched from an API endpoint. It manages multiple Item instances and provides methods for loading, rendering, and manipulating them.
@@ -12,6 +14,8 @@ A Collection represents a list of items fetched from an API endpoint. It manages
 
 **Using Bundle:**
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     const collection = KViews.createCollectionInstance('#posts', {
@@ -291,6 +295,8 @@ Pagination parameters are automatically added to the URL:
 
 <div id="posts"></div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -426,6 +432,8 @@ When empty, the template is hidden.
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     

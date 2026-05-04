@@ -34,7 +34,7 @@ npm install
 
 - Match the existing style in the files you touch.
 - Add or update tests for behavior changes.
-- Update user-facing docs (`README.md`, `docs/`) when the public API or install story changes.
+- Update user-facing docs (`README.md`, `docs/`) when the public API or install story changes. Any HTML or “quick start” snippet that loads KViews should mention **jQuery** and **Handlebars** as runtime dependencies (load **jQuery → Handlebars → KViews**).
 
 ## Pull requests
 

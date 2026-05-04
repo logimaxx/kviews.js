@@ -2,11 +2,15 @@
 
 The main factory class for creating Item and Collection instances.
 
+KViews expects **jQuery** (`$`) and **Handlebars** globally in the browser. Load jQuery, then Handlebars, then the bundle.
+
 ## Usage
 
 ### Bundle Version
 
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     // KViews is available globally
@@ -18,6 +22,8 @@ The main factory class for creating Item and Collection instances.
 ```
 
 ### ES6 Modules
+
+Ensure **jQuery** and **Handlebars** are loaded in the page (or provided by your bundler) before this module runs.
 
 ```javascript
 import { KViews } from './src/index.js';

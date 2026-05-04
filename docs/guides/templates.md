@@ -2,6 +2,10 @@
 
 Learn how to use Handlebars templates with KViews.
 
+## Runtime dependencies
+
+Templates are Handlebars, but **KViews also requires jQuery** for the DOM. In the browser, load **jQuery**, then **Handlebars**, then the KViews bundle (or those globals before a `<script type="module">` that imports `./src/index.js`). See [Getting Started](./getting-started.md).
+
 ## Template Basics
 
 KViews uses Handlebars for template rendering. Templates are compiled from HTML strings and rendered with item or collection data.
@@ -117,6 +121,8 @@ Handlebars helpers work as expected:
 
 <div id="posts"></div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -139,6 +145,8 @@ Handlebars helpers work as expected:
 
 <div id="posts"></div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     
@@ -153,6 +161,8 @@ Handlebars helpers work as expected:
 ## Custom Template Functions
 
 ### Compile Your Own Template
+
+Keep **jQuery** available globally for KViews when using compiled templates in the browser.
 
 ```javascript
 import Handlebars from 'handlebars';
@@ -221,6 +231,8 @@ Each item in the collection is rendered using this template.
     <p>No posts found.</p>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
     import { KViews } from './src/index.js';
     

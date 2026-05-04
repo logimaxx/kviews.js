@@ -18,9 +18,11 @@
 
 ### Dependencies
 
-- **jQuery** (required) - DOM manipulation
-- **Handlebars** (required) - Template compilation
-- **ES6+ Browser** - Modern JavaScript support
+- **jQuery** (required) — global `$` / `jQuery`; load **before** Handlebars and KViews
+- **Handlebars** (required) — global `Handlebars`; load **before** KViews
+- **ES6+ browser** — modern JavaScript support
+
+In plain HTML, use: `<script src="jquery…">` → `<script src="handlebars…">` → `<script src="kviews.js">` or the same two globals before `<script type="module">` that imports `./src/index.js`.
 
 ---
 

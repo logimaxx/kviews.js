@@ -121,8 +121,9 @@ KViews.helpers.fillForm('#form', item);
 
 ## Complete Example
 
-```javascript
-// Bundle version
+```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     const collection = KViews.createCollectionInstance('#posts', {

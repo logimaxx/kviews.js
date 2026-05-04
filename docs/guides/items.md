@@ -2,6 +2,8 @@
 
 Learn how to work with individual items in KViews.
 
+**Runtime:** KViews requires **jQuery** and **Handlebars** (see [Getting Started](./getting-started.md)). Bundle examples below load jQuery, then Handlebars, then `./dist/kviews.js`.
+
 ## What is an Item?
 
 An Item represents a single resource fetched from an API endpoint. It manages the item's data, relationships, and views.
@@ -12,6 +14,8 @@ An Item represents a single resource fetched from an API endpoint. It manages th
 
 **Using Bundle:**
 ```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script src="./dist/kviews.js"></script>
 <script>
     const item = KViews.createItemInstance('#post-detail', {
