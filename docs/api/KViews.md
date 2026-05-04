@@ -35,11 +35,30 @@ Main factory class for creating Item and Collection instances.
 ### Static Properties
 
 #### `KViews.baseUrl`
-Base URL to prepend to all API requests.
+Prefix prepended to **relative** request URLs in `Storage` (any string: origin, origin + path, or path prefix). Absolute `http(s)://` (and `//`) URLs are not modified. If both `baseUrl` and `basePath` are set, `baseUrl` wins.
 
 ```javascript
 KViews.baseUrl = 'https://api.example.com';
 ```
+
+#### `KViews.basePath`
+Same behavior as `baseUrl` for resolving relative URLs, intended for path-only prefixes (for example `/api/v1`). Used only when `baseUrl` is null or unset.
+
+```javascript
+KViews.basePath = '/api/v1';
+```
+
+#### `KViews.defaultHeaders`
+Plain object of HTTP headers merged into **every** `fetch` performed by KViews `Storage`. Lowest precedence: per-instance `headers` / `Storage` defaults, then headers passed into a specific `Storage.sync` call, override the same keys.
+
+```javascript
+KViews.defaultHeaders = { Authorization: 'Bearer ' + token };
+
+// Replace the whole defaults object; assign null/undefined to clear to {}
+KViews.defaultHeaders = { Accept: 'application/vnd.api+json' };
+```
+
+You may also mutate the returned object: `KViews.defaultHeaders['X-Trace'] = id`.
 
 #### `KViews.helpers`
 Utility functions for form handling and other operations. See [Utilities API](./Utilities.md) for details.
@@ -78,6 +97,9 @@ Creates a new Collection instance bound to a DOM element.
 - `container` (HTMLElement|String) - Container element for items
 - `disableempty` (Boolean) - Disable empty state rendering
 - `addontop` (Boolean) - Add new items at the top
+- `headers` (Object) - HTTP headers merged into all requests for this instance (overrides `KViews.defaultHeaders` on duplicate keys)
+- `ajaxOpts` (Object) - Options passed to the internal `Storage` constructor (e.g. `headers`); merged with top-level `headers`
+- `storage` (Storage) - Custom `Storage` instance (if set, `headers` / `ajaxOpts` are not applied automatically—configure that instance yourself)
 - `actions` (Array) - Array of action objects for items
 - `on` (Object) - Event listeners object
 - `dontload` (Boolean) - Don't auto-load data
@@ -108,6 +130,9 @@ Creates a new Item instance bound to a DOM element.
 - `template` (Function|String|jQuery) - Handlebars template function, selector, or jQuery object
 - `emptyview` (HTMLElement|String) - Element or selector for empty state
 - `strict` (Boolean) - Strict mode (reject unknown attributes)
+- `headers` (Object) - HTTP headers for all requests for this item (merged with `KViews.defaultHeaders`; instance wins on duplicate keys)
+- `ajaxOpts` (Object) - Passed to internal `Storage` unless `storage` is provided
+- `storage` (Storage) - Custom `Storage` instance
 - `actions` (Array) - Array of action objects
 - `on` (Object) - Event listeners object
 - `dontload` (Boolean) - Don't auto-load data
@@ -130,7 +155,7 @@ Extracts and merges options from element data attributes and parameters.
 
 #### `KViews.getOrUpdateInstance(el, options)`
 
-Checks for existing instance and updates it if found.
+Checks for existing instance and updates it if found. A whitelisted set of options is applied safely; this includes `headers`, which updates the instance’s `Storage` default headers (useful after refreshing a token).
 
 #### `KViews.processEmptyView(options)`
 
@@ -160,6 +185,9 @@ $('#item').kviews({
 // Helper methods
 $('#collection').kviewsCollection('/api/posts');
 $('#item').kviewsItem('/api/posts/1');
+
+// Same static HTTP settings as KViews (baseUrl, basePath, defaultHeaders)
+$.fn.kviews.defaultHeaders = { Authorization: 'Bearer ' + token };
 ```
 
 ## Global Access

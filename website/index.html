@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KViews — JSON:API binding for the DOM</title>
+    <meta
+      name="description"
+      content="Class-based JavaScript library for JSON:API collections and items with Handlebars templates, jQuery, and Fetch."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>KViews</h1>
+        <p>
+          Bind JSON:API resources to the browser: collections, single items, templates, filtering,
+          pagination, and CRUD helpers—without a heavy UI framework.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="https://github.com/logimaxx/kviews">GitHub repository</a>
+          <a class="btn" href="https://www.npmjs.com/package/kviews">npm package</a>
+          <a class="btn" href="https://github.com/logimaxx/kviews/tree/main/docs">Documentation (in repo)</a>
+          <a class="btn" href="#live-demo">Jump to live demo</a>
+        </div>
+      </header>
+
+      <section id="live-demo">
+        <h2>Live demo</h2>
+        <div class="card" style="padding: 0; overflow: hidden">
+          <p style="margin: 0; padding: 1rem 1.25rem; color: var(--muted); border-bottom: 1px solid var(--border)">
+            A <strong>Collection</strong> loads JSON:API from
+            <a href="./data/posts.json"><code>data/posts.json</code></a> (array in <code>data</code>). A
+            <strong>single Item</strong> loads one resource from
+            <a href="./data/post-1.json"><code>data/post-1.json</code></a>. Both hydrate <code>author</code> from
+            <code>included</code> and render with Handlebars (<code>{{title}}</code>, <code>{{author.name}}</code>).
+          </p>
+          <div class="demo-split">
+            <div class="demo-shell">
+              <h3 class="demo-panel-title">Collection</h3>
+              <div class="demo-toolbar">
+                <span id="demo-status">Initializing…</span>
+                <button type="button" class="btn" id="demo-reload">Reload list JSON</button>
+              </div>
+              <div id="demo-posts" class="demo-list">
+                <article class="post-row">
+                  <h3>{{title}}</h3>
+                  <p class="post-meta">Author: {{author.name}}{{#if author.role}} · {{author.role}}{{/if}}</p>
+                  <p>{{content}}</p>
+                </article>
+              </div>
+            </div>
+            <div class="demo-shell">
+              <h3 class="demo-panel-title">Single item</h3>
+              <div class="demo-toolbar">
+                <span id="demo-item-status">Waiting…</span>
+                <button type="button" class="btn" id="demo-reload-item">Reload item JSON</button>
+              </div>
+              <div id="demo-post-single" class="demo-item-wrap">
+                <article class="post-row post-single">
+                  <h3>{{title}}</h3>
+                  <p class="post-meta">Author: {{author.name}}{{#if author.role}} · {{author.role}}{{/if}}</p>
+                  <p>{{content}}</p>
+                </article>
+              </div>
+            </div>
+          </div>
+          <div class="demo-code" style="padding: 0 1.25rem 1.25rem">
+            <h3 class="demo-code-title">Collection</h3>
+            <pre><code id="demo-snippet-collection"></code></pre>
+            <h3 class="demo-code-title">Item</h3>
+            <pre><code id="demo-snippet-item"></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Install</h2>
+        <div class="card">
+          <pre><code>npm install kviews handlebars jquery</code></pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>Quick start (ES modules)</h2>
+        <div class="card">
+          <pre><code>import KViews from 'kviews';
+
+KViews.createCollectionInstance('#posts', {
+  url: '/api/posts',
+  type: 'posts',
+});</code></pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>Bundle (no bundler)</h2>
+        <div class="card">
+          <p style="margin: 0 0 0.75rem; color: var(--muted)">
+            On this site, the built files are served from <code>./dist/</code> after each deploy. In your own app you
+            can load from npm/CDN instead.
+          </p>
+          <pre><code>&lt;script src="path/to/handlebars.min.js"&gt;&lt;/script&gt;
+&lt;script src="path/to/jquery.min.js"&gt;&lt;/script&gt;
+&lt;script src="path/to/kviews.min.js"&gt;&lt;/script&gt;</code></pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>Links</h2>
+        <div class="card">
+          <ul class="links">
+            <li><a href="https://github.com/logimaxx/kviews/blob/main/README.md">README</a> — features, API overview, HTTP headers</li>
+            <li><a href="https://github.com/logimaxx/kviews/blob/main/CONTRIBUTING.md">Contributing</a> — tests and PRs</li>
+            <li><a href="./demo.html">Minimal bundle check</a> (jQuery + Handlebars + KViews only)</li>
+            <li><a href="https://github.com/logimaxx/kviews/blob/main/LICENSE">MIT License</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <footer>
+        Deployed with
+        <a href="https://pages.github.com/">GitHub Pages</a>
+        from the <code>website/</code> directory. Source:
+        <a href="https://github.com/logimaxx/kviews">logimaxx/kviews</a>.
+      </footer>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+    <script src="./dist/kviews.min.js"></script>
+    <script>
+      (function () {
+        var snippetCollection =
+          "var dataUrl = new URL('data/posts.json', window.location.href).href;\n\n" +
+          "var collection = KViews.createCollectionInstance('#demo-posts', {\n" +
+          "  url: dataUrl,\n" +
+          "  type: 'posts',\n" +
+          "  dontload: true,\n" +
+          "  pageSize: 10\n" +
+          "});\n\n" +
+          "collection.loadFromRemote().then(function () {\n" +
+          "  console.log('Loaded', collection.items.length, 'items');\n" +
+          "});";
+
+        var snippetItem =
+          "var itemUrl = new URL('data/post-1.json', window.location.href).href;\n\n" +
+          "var item = KViews.createItemInstance('#demo-post-single', {\n" +
+          "  url: itemUrl,\n" +
+          "  type: 'posts',\n" +
+          "  dontload: true\n" +
+          "});\n\n" +
+          "item.loadFromRemote().then(function () {\n" +
+          "  console.log('Loaded item', item.attributes && item.attributes.title);\n" +
+          "});";
+
+        var statusEl = document.getElementById("demo-status");
+        var itemStatusEl = document.getElementById("demo-item-status");
+        var snippetColEl = document.getElementById("demo-snippet-collection");
+        var snippetItemEl = document.getElementById("demo-snippet-item");
+        if (snippetColEl) {
+          snippetColEl.textContent = snippetCollection;
+        }
+        if (snippetItemEl) {
+          snippetItemEl.textContent = snippetItem;
+        }
+
+        function setStatus(text, kind) {
+          statusEl.textContent = text;
+          statusEl.classList.remove("is-error", "is-ok");
+          if (kind === "error") {
+            statusEl.classList.add("is-error");
+          } else if (kind === "ok") {
+            statusEl.classList.add("is-ok");
+          }
+        }
+
+        function setItemStatus(text, kind) {
+          itemStatusEl.textContent = text;
+          itemStatusEl.classList.remove("is-error", "is-ok");
+          if (kind === "error") {
+            itemStatusEl.classList.add("is-error");
+          } else if (kind === "ok") {
+            itemStatusEl.classList.add("is-ok");
+          }
+        }
+
+        function runDemo() {
+          if (typeof window.KViews === "undefined") {
+            setStatus("KViews failed to load (check ./dist/kviews.min.js).", "error");
+            setItemStatus("KViews not available.", "error");
+            return Promise.reject();
+          }
+
+          var dataUrl = new URL("data/posts.json", window.location.href).href;
+          var el = document.getElementById("demo-posts");
+          if (!el) {
+            return Promise.reject();
+          }
+
+          setStatus(
+            window.__kviewsDemoCollection ? "Reloading JSON:API…" : "Loading JSON:API…",
+            null
+          );
+
+          if (!window.__kviewsDemoCollection) {
+            window.__kviewsDemoCollection = KViews.createCollectionInstance(el, {
+              url: dataUrl,
+              type: "posts",
+              dontload: true,
+              pageSize: 10
+            });
+          }
+
+          var collection = window.__kviewsDemoCollection;
+
+          return collection
+            .loadFromRemote()
+            .then(function () {
+              setStatus("Loaded " + collection.items.length + " posts from " + dataUrl, "ok");
+            })
+            .catch(function (err) {
+              var msg = err && err.message ? err.message : String(err);
+              setStatus("Request failed: " + msg + " — open devtools Network tab.", "error");
+            });
+        }
+
+        function runDemoItem() {
+          if (typeof window.KViews === "undefined") {
+            setItemStatus("KViews not available.", "error");
+            return Promise.reject();
+          }
+
+          var itemUrl = new URL("data/post-1.json", window.location.href).href;
+          var itemEl = document.getElementById("demo-post-single");
+          if (!itemEl) {
+            return Promise.reject();
+          }
+
+          setItemStatus(
+            window.__kviewsDemoItem ? "Reloading single resource…" : "Loading single resource…",
+            null
+          );
+
+          if (!window.__kviewsDemoItem) {
+            window.__kviewsDemoItem = KViews.createItemInstance(itemEl, {
+              url: itemUrl,
+              type: "posts",
+              dontload: true
+            });
+          }
+
+          var item = window.__kviewsDemoItem;
+
+          return item
+            .loadFromRemote()
+            .then(function () {
+              var title =
+                item.attributes && item.attributes.title ? String(item.attributes.title) : "(no title)";
+              setItemStatus('Loaded one post: "' + title + '" from ' + itemUrl, "ok");
+            })
+            .catch(function (err) {
+              var msg = err && err.message ? err.message : String(err);
+              setItemStatus("Request failed: " + msg + " — open devtools Network tab.", "error");
+            });
+        }
+
+        function runAllDemos() {
+          return Promise.all([runDemo(), runDemoItem()]);
+        }
+
+        document.getElementById("demo-reload").addEventListener("click", function () {
+          runDemo();
+        });
+
+        document.getElementById("demo-reload-item").addEventListener("click", function () {
+          runDemoItem();
+        });
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", runAllDemos);
+        } else {
+          runAllDemos();
+        }
+      })();
+    </script>
+  </body>
+</html>

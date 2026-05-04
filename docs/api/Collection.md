@@ -10,6 +10,14 @@ Represents a collection of items from an API.
 new Collection(options)
 ```
 
+When using the constructor directly (instead of `KViews.createCollectionInstance`), common HTTP-related options include:
+
+- `headers` (Object) - Default headers for this collection’s `Storage` (merged with `KViews.defaultHeaders` on each request)
+- `ajaxOpts` (Object) - Constructor options for the internal `Storage` (merged with `headers`)
+- `storage` (Storage) - Use a custom `Storage` instead of the default
+
+Items created by the collection inherit the same `storage` instance, so global and collection-level headers apply to item loads and updates as well.
+
 ### Properties
 
 #### `url` (URL)

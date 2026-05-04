@@ -12,6 +12,7 @@ playwright/.cache/
 
 # IDE
 .vscode/
+.cursor/
 .idea/
 *.swp
 *.swo
@@ -31,3 +32,4 @@ npm-debug.log*
 
 
 test.js
+KVIEWS_COMPLETE_DOCUMENTATION.md

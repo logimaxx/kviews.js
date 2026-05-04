@@ -44,8 +44,12 @@ const item = KViews.createItemInstance(selector, {
     type: 'resource-type'
 });
 
-// Base URL
+// Base URL / path — relative `url` values are prefixed (absolute http(s) URLs unchanged)
 KViews.baseUrl = 'https://api.example.com';
+// KViews.basePath = '/api/v1'; // optional path-only prefix if baseUrl unset
+
+// Default HTTP headers for every request (Fetch); per-instance `headers` overrides same keys
+KViews.defaultHeaders = { Authorization: 'Bearer ' + token };
 
 // Helpers
 KViews.helpers.fillForm('#form', item);
@@ -600,20 +604,17 @@ const collection = KViews.createCollectionInstance('#users-list', {
 {{/if}}
 ```
 
-### Built-in Helpers
+### Handlebars built-ins (and custom helpers)
+
+KViews does **not** register extra Handlebars helpers. You get standard Handlebars block helpers such as:
 
 ```handlebars
-<!-- Conditional -->
 {{#if condition}}...{{/if}}
 {{#unless condition}}...{{/unless}}
-
-<!-- Loops -->
 {{#each items}}...{{/each}}
-
-<!-- Comparison -->
-{{#eq value1 value2}}...{{/eq}}
-{{#gt value1 value2}}...{{/gt}}
 ```
+
+For comparisons (`eq`, `gt`, etc.), register your own helpers (for example with `Handlebars.registerHelper`) or use a helper library your app already loads.
 
 ---
 

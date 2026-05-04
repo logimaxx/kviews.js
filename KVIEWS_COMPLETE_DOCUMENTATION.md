@@ -314,12 +314,30 @@ const item = KViews.createItemInstance('#user-detail', {
 
 #### `KViews.baseUrl`
 
-URL de bază pentru toate request-urile API:
+Prefix pentru URL-urile **relative** folosite la request-uri (origine completă sau prefix de cale). URL-urile absolute `http(s)://` rămân nemodificate. Dacă sunt setate atât `baseUrl` cât și `basePath`, se folosește `baseUrl`.
 
 ```javascript
 KViews.baseUrl = 'https://api.example.com';
-// Toate request-urile vor folosi acest base URL
 ```
+
+#### `KViews.basePath`
+
+Prefix de cale (ex. `/api/v1`) folosit la fel ca `baseUrl` pentru URL-uri relative, când `baseUrl` nu este setat.
+
+```javascript
+KViews.basePath = '/api/v1';
+```
+
+#### `KViews.defaultHeaders`
+
+Obiect cu antete HTTP implicite pentru **toate** request-urile (Fetch). Se îmbină cu antetele definite pe instanță (`headers` / `Storage`); la aceeași cheie, valoarea de pe instanță sau de la apelul individual câștigă.
+
+```javascript
+KViews.defaultHeaders = { Authorization: 'Bearer ' + token };
+// Golire: KViews.defaultHeaders = null;
+```
+
+La `createCollectionInstance` / `createItemInstance`, opțiunea `headers: { ... }` adaugă sau suprascrie antete pentru acea instanță. Opțional: `ajaxOpts` pentru constructorul `Storage` (îmbinare cu `headers`).
 
 #### `KViews.helpers`
 
@@ -511,7 +529,9 @@ item.on('remove', (item) => {
 
 ### Storage
 
-Clasa Storage gestionează operațiunile HTTP. De obicei nu este folosită direct, ci prin Collection și Item.
+Clasa Storage gestionează operațiunile HTTP (Fetch API). De obicei nu este folosită direct, ci prin Collection și Item.
+
+Antetele pentru fiecare request se construiesc prin îmbinare: `KViews.defaultHeaders`, apoi valorile implicite ale instanței `Storage` (inclusiv `headers` din opțiunile colecției/item-ului), apoi antetele transmise la apelul concret (`sync` / `read` / etc.).
 
 **Metode:**
 - `read()` - GET request

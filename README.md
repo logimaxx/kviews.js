@@ -18,6 +18,23 @@ A modern, class-based JavaScript library for binding JSON API data to DOM elemen
 
 ## Installation
 
+### npm
+
+```bash
+npm install kviews
+```
+
+ES module import (browser app with your bundler):
+
+```javascript
+import KViews from 'kviews';
+// named exports: Item, Collection, Storage, …
+```
+
+Peer dependencies: **Handlebars** and **jQuery** must be installed in your app (`npm install handlebars jquery`).
+
+The published package includes `src/` (ESM) and `dist/` (IIFE bundle). Run `npm run build` before `npm pack` / `npm publish`; `prepack` runs the build automatically.
+
 ### Using Bundle (No Build Step Required)
 
 Download `dist/kviews.js` and include it in your HTML:
@@ -172,8 +189,28 @@ const collection = KViews.createCollectionInstance('#posts', {
 
 - `KViews.createCollectionInstance(el, opts)` - Create collection instance
 - `KViews.createItemInstance(el, opts, data)` - Create item instance
-- `KViews.baseUrl` - Base URL for all API requests
+- `KViews.baseUrl` - Prefix for relative request URLs (full origin or any path prefix)
+- `KViews.basePath` - Same role as `baseUrl` when you only need a path prefix; ignored if `baseUrl` is set
+- `KViews.defaultHeaders` - Default HTTP headers merged into every request (e.g. global auth); per-instance `headers` override on duplicate keys
 - `KViews.helpers` - Utility functions (fillForm, captureFormSubmit, fetchFormData)
+
+### HTTP: URLs and headers
+
+Relative `url` values are resolved with `KViews.baseUrl` or `KViews.basePath` before `fetch`. Absolute `http(s)://` URLs are left unchanged.
+
+Default headers apply app-wide; each collection or item can add or override headers via the `headers` option (and optional `ajaxOpts` for lower-level `Storage` defaults). Merge order is: **global `defaultHeaders` → instance / `Storage` defaults → per-request overrides** (later wins on the same header name).
+
+```javascript
+KViews.defaultHeaders = { Authorization: 'Bearer ' + token };
+
+KViews.createCollectionInstance('#posts', {
+    url: '/api/posts',
+    type: 'posts',
+    headers: { 'X-Request-Id': crypto.randomUUID() }
+});
+```
+
+With jQuery, `$.fn.kviews.baseUrl`, `basePath`, and `defaultHeaders` mirror the `KViews` static properties.
 
 ### Collection
 
@@ -191,6 +228,24 @@ const collection = KViews.createCollectionInstance('#posts', {
 - `render()` - Render item
 - `on(event, callback)` - Event listeners
 
+## Contributing & security
+
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — how to run tests and submit changes  
+- [SECURITY.md](./SECURITY.md) — how to report security issues  
+- [CHANGELOG.md](./CHANGELOG.md) — release notes  
+
+## GitHub Pages
+
+This repo includes a static site in [`website/`](./website/) (landing page, **live collection demo** that loads [`website/data/posts.json`](./website/data/posts.json), and a minimal bundle check page). The workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs tests, builds `dist/`, copies `kviews.js` / `kviews.min.js` into `website/dist/`, and deploys to **GitHub Pages**.
+
+**One-time setup in the GitHub repo**
+
+1. Open **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions** (not “Deploy from a branch”).
+3. Push to `main` or `master` (or run the **Deploy GitHub Pages** workflow manually from the Actions tab).
+
+The site will be available at **`https://logimaxx.github.io/kviews/`** (replace `logimaxx` with your user or org name if different). The first deploy may ask you to approve the **github-pages** environment.
+
 ## Documentation
 
 Comprehensive documentation is available in the [`docs/`](./docs/) directory:
@@ -204,11 +259,9 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 ### Setup
 
 ```bash
-# Clone repository
-git clone <repository-url>
-cd kviews.js
+git clone https://github.com/logimaxx/kviews.git
+cd kviews
 
-# Install dependencies
 npm install
 ```
 
@@ -394,4 +447,4 @@ For issues, questions, or contributions:
 
 ---
 
-Made with ❤️ for modern web development
+Created to tame complexity: code cleaner, work less.

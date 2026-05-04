@@ -156,9 +156,13 @@ export function template(text) {
  * Create overlay element for loading indicators
  */
 export function createOverlay(instance) {
-    return $("<div>").text("Se incarca 123")
+    // Use a real element so `$("<div>")` HTML parsing quirks (e.g. in jsdom) never yield an empty set.
+    return $(document.createElement("div"))
+        .text("Se incarca 123")
         .addClass("komponent-overlay")
         .data("asd", instance)
-        .attr("style", "background: linear-gradient(135deg,rgb(191, 225, 205),rgb(236, 234, 232) 70%, #fca); text-align: center; position:absolute; z-index:100000;")
-    return overlay;
+        .attr(
+            "style",
+            "background: linear-gradient(135deg,rgb(191, 225, 205),rgb(236, 234, 232) 70%, #fca); text-align: center; position:absolute; z-index:100000;"
+        );
 }

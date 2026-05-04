@@ -11,7 +11,8 @@ import { Storage, KViews } from './src/index.js';
 
 const customStorage = new Storage({
     url: 'https://api.example.com',
-    method: 'GET'
+    method: 'GET',
+    headers: { Authorization: 'Bearer ...' }
 });
 
 const collection = KViews.createCollectionInstance('#posts', {
@@ -21,19 +22,47 @@ const collection = KViews.createCollectionInstance('#posts', {
 });
 ```
 
-## Base URL Configuration
+## Base URL configuration
 
-Set a base URL for all requests:
+Set a prefix for **relative** request URLs (see also `KViews.basePath` for path-only prefixes):
 
 ```javascript
 KViews.baseUrl = 'https://api.example.com';
 
-// All URLs will be prefixed with baseUrl
+// Relative URLs are resolved against baseUrl
 KViews.createCollectionInstance('#posts', {
     url: '/api/posts', // Becomes 'https://api.example.com/api/posts'
     type: 'posts'
 });
 ```
+
+## Default HTTP headers (global)
+
+Use `KViews.defaultHeaders` for headers that should be sent on **every** request (for example a bearer token or API key). Values are merged with per-instance options; the same header name on an instance overrides the global default.
+
+```javascript
+KViews.defaultHeaders = {
+    Authorization: 'Bearer ' + accessToken,
+    Accept: 'application/vnd.api+json'
+};
+
+// Optional: per-instance headers (merged; override duplicate keys)
+KViews.createCollectionInstance('#posts', {
+    url: '/api/posts',
+    type: 'posts',
+    headers: { 'X-Request-Id': requestId }
+});
+```
+
+Merge order when building a request: **global `defaultHeaders` → `Storage` defaults** (from `new Storage(ajaxOpts)` and instance `headers`) **→ headers passed to a specific `Storage.sync` call**. Later steps win on duplicate keys.
+
+To clear globals: `KViews.defaultHeaders = null` (or assign a new object).
+
+## Per-instance headers and `ajaxOpts`
+
+Collections and items accept a `headers` object in their options. You can also pass `ajaxOpts`, which is forwarded to the `Storage` constructor; if both define `headers`, they are shallow-merged with top-level `headers` winning on conflicts.
+
+If you pass a custom `storage` instance, KViews does not merge `headers` / `ajaxOpts` for you—put defaults on that `Storage` yourself.
 
 ## Custom URL Handling
 

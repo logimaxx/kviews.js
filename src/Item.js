@@ -227,7 +227,7 @@ export class Item {
      */
     loadFromDataSource() {
         let loaders = [];
-        const overlay = createOverlay();
+        const overlay = createOverlay(this);
 
         this.views.forEach((itemView) => {
             if (itemView.el) {
@@ -468,10 +468,13 @@ export class Item {
             if(!obj) {
                 return null;
             }
-            if(!obj?.attributes)  {
-                return {id:obj.id};
+            if (!obj?.attributes) {
+                return obj.type != null ? { id: obj.id, type: obj.type } : { id: obj.id };
             }
-            const result = Object.assign({ id: obj.id }, obj?.attributes ?? { id: obj.id });
+            const result = Object.assign(
+                { id: obj.id, ...(obj.type != null ? { type: obj.type } : {}) },
+                obj?.attributes ?? {}
+            );
             Object.keys(obj?.relationships??{}).forEach(relName => {
                 // console.log("debugggg Enter relation",relName,obj.relationships[relName]);
                 if(Array.isArray(obj.relationships[relName])) {
@@ -485,46 +488,8 @@ export class Item {
             });
             return result;
         }
-        const tmp = copyntransform(this,0);
-        // console.log("debugggg result",this,tmp);
+        const tmp = copyntransform(this, 0);
         return tmp;
-
-        // Create a shallow copy of attributes (exposed directly in template)
-        const context = Object.assign({}, this.attributes);
-        
-        // Add relationships as separate properties (flattened to template-friendly format)
-        // Strategy: Flatten relationships to plain objects with id, type, and attributes merged
-        if (this.relationships) {
-            Object.getOwnPropertyNames(this.relationships).forEach(relName => {
-                const rel = this.relationships[relName];
-                
-                if (rel === null) {
-                    // Null relationship
-                    context[relName] = null;
-                } else if (Array.isArray(rel)) {
-                    // To-many: Array of flattened objects
-                    context[relName] = rel.map(item => {
-                        if (item && typeof item === 'object' && item.attributes) {
-                            // Item-like object: flatten to { id, type, ...attributes }
-                            return Object.assign({}, item.attributes);
-                        }
-                        // Already plain object or primitive
-                        return item;
-                    });
-                } else if (rel && typeof rel === 'object' && rel.attributes) {
-                    // To-one: Flatten to { id, type, ...attributes }
-                    context[relName] = Object.assign({}, rel.attributes);
-                } else {
-                    // Fallback: plain object or primitive (create copy if object)
-                    context[relName] = (typeof rel === 'object' && rel !== null) 
-                        ? Object.assign({}, rel) 
-                        : rel;
-                }
-            });
-        }
-        
-  
-        return context;
     }
 
     /**

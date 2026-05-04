@@ -5,8 +5,8 @@
  * Creates both dist/kviews.js (normal) and dist/kviews.min.js (minified)
  */
 
-import { build } from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { build, transformSync } from 'esbuild';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -38,57 +38,71 @@ const baseConfig = {
     }
 };
 
-// Build both versions in parallel
-Promise.all([
-    // Normal version with sourcemap
-    build({
-        ...baseConfig,
-        outfile: join(distDir, 'kviews.js'),
-        minify: false,
-        sourcemap: true
-    }),
-    // Minified version without sourcemap
-    build({
-        ...baseConfig,
-        outfile: join(distDir, 'kviews.min.js'),
-        minify: true,
-        sourcemap: false
-    })
-]).then(() => {
-    // Post-process to ensure KViews class is properly exposed
-    // Read the bundle
-    let bundle = readFileSync(join(distDir, 'kviews.js'), 'utf8');
-    
-    // The issue: esbuild assigns the exports object to KViews, but we want the class
-    // Find where KViews2 (the class) is defined and ensure it's what gets assigned to global KViews
-    if (bundle.includes('var KViews2 = class') && bundle.includes('window.KViews = KViews2')) {
-        // Replace: var KViews = (() => { ... return __toCommonJS(...); })();
-        // With: var KViews = (() => { ... return KViews2; })();
-        // This ensures the global KViews variable points to the class, not the exports object
-        
-        // Find the return statement and replace it
-        bundle = bundle.replace(
-            /return __toCommonJS\(index_exports\);/,
-            'return KViews2;'
+const outJs = join(distDir, 'kviews.js');
+const outMin = join(distDir, 'kviews.min.js');
+const outMap = join(distDir, 'kviews.js.map');
+const websiteDistDir = join(__dirname, 'website', 'dist');
+
+/**
+ * esbuild IIFE + many exports sets global `KViews` to the CommonJS-style exports object,
+ * not the default-exported class — so `KViews.createItemInstance` is missing.
+ * The default export (`index_default`) is the KViews class; return that from the IIFE.
+ */
+function patchIifeReturnToDefaultExport(bundle) {
+    const needle = 'return __toCommonJS(index_exports);';
+    if (!bundle.includes(needle)) {
+        console.warn(
+            '⚠️  build post-process: expected IIFE return not found; global KViews may be wrong.'
         );
-        
-        writeFileSync(join(distDir, 'kviews.js'), bundle);
+        return bundle;
     }
-    
-    // Same for minified version
-    let minBundle = readFileSync(join(distDir, 'kviews.min.js'), 'utf8');
-    if (minBundle.includes('window.KViews=')) {
-        minBundle = minBundle.replace(
-            /return __toCommonJS\([^)]+\)/g,
-            'return KViews2'
-        );
-        writeFileSync(join(distDir, 'kviews.min.js'), minBundle);
+    return bundle.replace(needle, 'return index_default;');
+}
+
+async function main() {
+    const outEsm = join(distDir, 'index.js');
+
+    await Promise.all([
+        build({
+            entryPoints: [join(__dirname, 'src/index.js')],
+            bundle: true,
+            format: 'esm',
+            platform: 'browser',
+            outfile: outEsm,
+            sourcemap: true
+        }),
+        build({
+            ...baseConfig,
+            outfile: outJs,
+            minify: false,
+            sourcemap: true
+        })
+    ]);
+
+    let bundle = readFileSync(outJs, 'utf8');
+    bundle = patchIifeReturnToDefaultExport(bundle);
+    writeFileSync(outJs, bundle);
+
+    const minBody = transformSync(bundle, { minify: true, loader: 'js' }).code;
+    writeFileSync(outMin, banner + '\n' + minBody);
+
+    if (!existsSync(websiteDistDir)) {
+        mkdirSync(websiteDistDir, { recursive: true });
     }
-    
+    copyFileSync(outJs, join(websiteDistDir, 'kviews.js'));
+    copyFileSync(outMin, join(websiteDistDir, 'kviews.min.js'));
+    if (existsSync(outMap)) {
+        copyFileSync(outMap, join(websiteDistDir, 'kviews.js.map'));
+    }
+
     console.log('✅ Bundle created:');
-    console.log('   - dist/kviews.js (normal, with sourcemap)');
-    console.log('   - dist/kviews.min.js (minified)');
-}).catch((error) => {
+    console.log('   - dist/index.js (ESM for npm / bundlers, with sourcemap)');
+    console.log('   - dist/kviews.js (IIFE browser bundle, with sourcemap)');
+    console.log('   - dist/kviews.min.js (IIFE minified, from patched bundle)');
+    console.log('   - website/dist/* (IIFE copies for pages that load ./dist/…)');
+}
+
+main().catch((error) => {
     console.error('❌ Build failed:', error);
     process.exit(1);
 });

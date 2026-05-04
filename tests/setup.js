@@ -51,8 +51,9 @@ const createJQueryMock = (element) => {
             return undefined;
         }),
         
-        data: vi.fn((key, value) => {
-            if (value !== undefined) {
+        data: vi.fn(function (key, value) {
+            // Match jQuery: two-argument form is always a setter (even if value is undefined).
+            if (arguments.length >= 2) {
                 elements.forEach(el => {
                     if (el) {
                         if (!el._jqueryData) el._jqueryData = {};
@@ -94,7 +95,7 @@ const createJQueryMock = (element) => {
             return undefined;
         }),
         
-        val: vi.fn((value) => {
+        val: vi.fn(function (value) {
             if (value !== undefined) {
                 elements.forEach(el => {
                     if (el) el.value = value;

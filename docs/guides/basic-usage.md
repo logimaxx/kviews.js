@@ -127,6 +127,10 @@ const item = KViews.createItemInstance('#post-detail', {
 });
 ```
 
+## API base URL and headers (optional)
+
+Use `KViews.baseUrl` or `KViews.basePath` to prefix relative endpoint paths, and `KViews.defaultHeaders` or the `headers` option on `createCollectionInstance` / `createItemInstance` for tokens and other HTTP headers. Details and merge rules are in [Advanced topics](./advanced.md).
+
 ## Working with Data
 
 ### Loading Data

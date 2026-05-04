@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KViews — bundle check</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Bundle check</h1>
+        <p>
+          Minimal page: only checks that jQuery, Handlebars, and <code>./dist/kviews.min.js</code> load. For a full
+          collection + JSON:API example, use the
+          <a href="./index.html#live-demo">live demo on the home page</a>.
+        </p>
+        <p class="actions" style="margin-top: 1rem">
+          <a class="btn primary" href="./index.html#live-demo">Open live demo</a>
+          <a class="btn" href="./index.html">Home</a>
+        </p>
+      </header>
+
+      <section>
+        <h2>Status</h2>
+        <div class="card">
+          <p id="status" style="margin: 0">Loading scripts…</p>
+        </div>
+      </section>
+
+      <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+      <script src="./dist/kviews.min.js"></script>
+      <script>
+        (function () {
+          var el = document.getElementById("status");
+          var ok =
+            typeof window.jQuery !== "undefined" &&
+            typeof window.Handlebars !== "undefined" &&
+            typeof window.KViews !== "undefined" &&
+            typeof window.KViews.createCollectionInstance === "function" &&
+            typeof window.KViews.createItemInstance === "function";
+          el.textContent = ok
+            ? "OK — jQuery, Handlebars, and KViews (collection + item factories) are available."
+            : "Something failed — check the console and network tab (is ./dist/kviews.min.js present?).";
+          el.style.color = ok ? "var(--accent)" : "#f87171";
+        })();
+      </script>
+    </div>
+  </body>
+</html>

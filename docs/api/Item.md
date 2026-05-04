@@ -14,6 +14,14 @@ new Item(options, data)
 - `options` (Object) - Configuration options
 - `data` (Object) - Optional initial data
 
+**HTTP-related options** (when not using a parent collection’s `storage`):
+
+- `headers` (Object) - Default headers for this item’s `Storage`
+- `ajaxOpts` (Object) - Options passed to `new Storage(...)` (merged with `headers`)
+- `storage` (Storage) - Custom `Storage` instance
+
+Headers are merged on each request with `KViews.defaultHeaders` (global first, then instance defaults, then per-call overrides).
+
 ### Properties
 
 #### `id` (String|Number)
