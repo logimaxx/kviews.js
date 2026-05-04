@@ -469,10 +469,12 @@ export class Item {
                 return null;
             }
             if (!obj?.attributes) {
-                return obj.type != null ? { id: obj.id, type: obj.type } : { id: obj.id };
+                // return obj.type != null ? { id: obj.id, type: obj.type } : { id: obj.id };
+                return { id: obj.id };
             }
             const result = Object.assign(
-                { id: obj.id, ...(obj.type != null ? { type: obj.type } : {}) },
+                // { id: obj.id, ...(obj.type != null ? { type: obj.type } : {}) },
+                { id: obj.id},
                 obj?.attributes ?? {}
             );
             Object.keys(obj?.relationships??{}).forEach(relName => {

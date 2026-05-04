@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
- * Version: 1.1.1
- * Built: 2026-05-04T06:19:21.445Z
+ * Version: 1.1.2
+ * Built: 2026-05-04T07:09:17.519Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -1384,10 +1384,11 @@ var KViews = (() => {
           return null;
         }
         if (!obj?.attributes) {
-          return obj.type != null ? { id: obj.id, type: obj.type } : { id: obj.id };
+          return { id: obj.id };
         }
         const result = Object.assign(
-          { id: obj.id, ...obj.type != null ? { type: obj.type } : {} },
+          // { id: obj.id, ...(obj.type != null ? { type: obj.type } : {}) },
+          { id: obj.id },
           obj?.attributes ?? {}
         );
         Object.keys(obj?.relationships ?? {}).forEach((relName) => {
