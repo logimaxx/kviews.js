@@ -122,17 +122,16 @@ describe('Refactoring Pass 2', () => {
             // Attributes should be directly accessible
             expect(context.title).toBe('Post Title');
             
-            // To-one relationship should be flattened
+            // To-one relationship should be flattened (id + attribute fields; no type)
             expect(context.author).toEqual({
                 id: '1',
-                type: 'users',
                 name: 'John Doe'
             });
             
             // To-many relationship should be array of flattened objects
             expect(context.tags).toEqual([
-                { id: '1', type: 'tags', name: 'tech' },
-                { id: '2', type: 'tags', name: 'js' }
+                { id: '1', name: 'tech' },
+                { id: '2', name: 'js' }
             ]);
         });
 
