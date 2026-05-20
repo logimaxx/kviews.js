@@ -18,18 +18,24 @@ Include the bundled file - no module system required:
 
 KViews will be available globally as `window.KViews`.
 
-### Option 2: ES6 Modules
+### Option 2: ES modules from npm
 
-Copy the `src/` directory to your project and import:
+If you use Vite, webpack, or another bundler:
+
+```bash
+npm install kviews handlebars jquery
+```
 
 ```html
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
-    import { KViews } from './src/index.js';
-    // Use KViews here
+    import KViews from 'kviews';
+    /* application code */
 </script>
 ```
+
+To work on **this** repository, clone it and import from `./src/index.js` instead of the `kviews` package name.
 
 ## Requirements
 

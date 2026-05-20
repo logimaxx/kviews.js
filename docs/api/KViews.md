@@ -66,6 +66,22 @@ KViews.defaultHeaders = { Accept: 'application/vnd.api+json' };
 
 You may also mutate the returned object: `KViews.defaultHeaders['X-Trace'] = id`.
 
+#### `KViews.defaultAdapter`
+Global default data adapter when none is set on a collection or item. Default: `'jsonapi'`. Accepts a built-in name (`'jsonapi'`, `'plain'`) or an adapter instance.
+
+```javascript
+KViews.defaultAdapter = 'plain';
+```
+
+See [Adapters Guide](../guides/adapters.md).
+
+#### `KViews.registerAdapter(name, adapter)`
+Register a custom adapter by name for use with `adapter: 'my-name'`.
+
+```javascript
+KViews.registerAdapter('my-api', myAdapter);
+```
+
 #### `KViews.helpers`
 Utility functions for form handling and other operations. See [Utilities API](./Utilities.md) for details.
 
@@ -95,6 +111,7 @@ Creates a new Collection instance bound to a DOM element.
 **Options:**
 - `url` (String) - API endpoint URL
 - `type` (String) - Resource type name
+- `adapter` (String|Object) - `'jsonapi'` (default), `'plain'`, registered name, or adapter instance
 - `template` (Function|String|jQuery) - Handlebars template function, selector, or jQuery object
 - `pageSize` (Number) - Number of items per page (default: 10)
 - `offset` (Number) - Initial offset for pagination
@@ -133,6 +150,7 @@ Creates a new Item instance bound to a DOM element.
 **Options:**
 - `url` (String) - API endpoint URL
 - `type` (String) - Resource type name
+- `adapter` (String|Object) - Data adapter (default: `'jsonapi'` or collection adapter)
 - `template` (Function|String|jQuery) - Handlebars template function, selector, or jQuery object
 - `emptyview` (HTMLElement|String) - Element or selector for empty state
 - `strict` (Boolean) - Strict mode (reject unknown attributes)

@@ -1,7 +1,7 @@
 import { dbg, log, parseOptions, createOverlay } from './utils.js';
 import { createURL } from './URL.js';
 import { Storage } from './Storage.js';
-import { parseItemData } from './dataParser.js';
+import { resolveAdapter } from './adapters/index.js';
 import { ItemView } from './ItemView.js';
 
 /**
@@ -24,12 +24,17 @@ export class Item {
         this.emptyview = null;
         this.uievents = [];
         this.callbacks = {};
+        this.adapter = null;
         
         try {
             Object.assign(this, parseOptions(options));
         } catch (e) {
             throw new Error("Error on Item init", e);
         }
+
+        this.adapter = resolveAdapter(
+            options.adapter ?? (options.collection && options.collection.adapter)
+        );
 
         this.storage =
             options.storage ||
@@ -221,6 +226,10 @@ export class Item {
         return this.loadFromDataSource();
     }
 
+    load(data) {
+        return data ? this.loadFromData(data):this.loadFromRemote();
+    }
+
     /**
      * Load from data source (internal implementation)
      * @private
@@ -254,7 +263,7 @@ export class Item {
             this.storage.read(this, urlString, {})
                 .then((resp) => {
                     let data = resp.data;
-                    this.loadFromJSONAPIDoc(data).render();
+                    this.loadFromRemoteDoc(data).render();
                     this._trigger('load', this);
                     loaders.forEach((loader) => {
                         loader.remove();
@@ -354,26 +363,38 @@ export class Item {
     }
 
     /**
-     * Load from JSON API document
+     * Load from a remote API document (format determined by adapter).
+     *
+     * @param {object} data - Raw HTTP response body
+     * @returns {Item} This instance for chaining
      */
-    loadFromJSONAPIDoc(data) {
-        dbg("Load from JSONAPIDoc", data);
-        if(this.collection && !this.collection.type ) {
-            this.type = data.data.type;
+    loadFromRemoteDoc(data) {
+        dbg("Load from remote doc", data);
+
+        if (this.collection && !this.collection.type) {
+            const inferredType = this.adapter.inferItemType(data);
+            if (inferredType) {
+                this.type = inferredType;
+            }
         }
 
-        if (data.data && data.data.constructor === Array) {
-            dbg("Invalid configuration: resource type is item but server response is collection", data);
-            throw new Error("Invalid configuration: resource type is item but server response is collection");
-        }
+        this.adapter.validateItemRemoteDoc(data, { collection: this.collection });
 
-        // Parse and hydrate item data (relationships are resolved)
-        const parsedData = parseItemData(data);
+        const parsedData = this.adapter.parseItemResponse(data, { collection: this.collection });
         Object.assign(this, parsedData);
         if (this.url) {
             this.url = createURL(this.url);
         }
         return this;
+    }
+
+    /**
+     * @deprecated Use loadFromRemoteDoc() instead
+     * @param {object} data - Raw HTTP response body
+     * @returns {Item} This instance for chaining
+     */
+    loadFromJSONAPIDoc(data) {
+        return this.loadFromRemoteDoc(data);
     }
 
     /**
@@ -599,78 +620,7 @@ export class Item {
      * @returns {Object} JSON:API relationship format: { data: { type, id } } or { data: [{ type, id }, ...] } or { data: null }
      */
     _serializeRelationshipToWireFormat(rel) {
-        // Null relationship
-        if (rel === null) {
-            return { data: null };
-        }
-
-        // To-one relationship: runtime object -> { data: { type, id } }
-        if (rel && typeof rel === 'object' && !Array.isArray(rel)) {
-            if (rel.id) {
-                // Runtime object with type/id
-                const result = {
-                    data: {
-                        id: rel.id
-                    }
-                };
-                if(rel.type) {
-                    result.data.type = rel.type;
-                }
-                return result;
-            } else if (rel.hasOwnProperty('toJSON')) {
-                // Item instance - extract type/id from toJSON result
-                const json = rel.toJSON();
-                const result = {
-                    data: {
-                        id: json.id
-                    }
-                };
-                if(json.type) {
-                    result.data.type = json.type;
-                }
-                return result;
-
-            } else {
-                // Unknown format - return null (can't serialize)
-                return { data: null };
-            }
-        }
-
-        // To-many relationship: array of runtime objects -> { data: [{ type, id }, ...] }
-        if (Array.isArray(rel)) {
-            return {
-                data: rel.map(item => {
-                    if (item && typeof item === 'object') {
-                        if (item.type && item.id) {
-                            // Runtime object with type/id
-                            const result = {
-                                id: item.id
-                            }
-                            if(item.type) {
-                                result.type = item.type;
-                            }
-                            return result;
-                        } else if (item.hasOwnProperty('toJSON')) {
-                            // Item instance - extract type/id
-                            const json = item.toJSON();
-                            const result = {
-                                type: json.type,
-                                id: json.id
-                            };
-                            if(json.type) {
-                                result.type = json.type;
-                            }
-                            return result;
-                        }
-                    }
-                    // Fallback: return as-is (may be invalid)
-                    return item;
-                }).filter(item => item && item.type && item.id) // Filter out invalid items
-            };
-        }
-
-        // Unknown format - return null
-        return { data: null };
+        return this.adapter.serializeRelationship(rel);
     }
 
     /**
@@ -738,10 +688,10 @@ export class Item {
                 return;
             }
 
-            let patchData = JSON.stringify({ data: toUpdate });
+            const payload = this.adapter.serializeForUpdate(toUpdate);
 
             if (opts && opts.justSimulate) {
-                dbg(patchData);
+                dbg(payload.body);
                 resolve(this);
                 return;
             }
@@ -750,10 +700,9 @@ export class Item {
                 let updateUrlString = this.updateUrl.toString ? this.updateUrl.toString() : this.updateUrl;
                 
                 this.storage
-                    .update(this, updateUrlString, {}, patchData)
+                    .update(this, updateUrlString, { contentType: payload.contentType }, payload.body)
                     .then((resp) => {
-                        // Parse and hydrate item data (relationships are resolved)
-                        let newData = parseItemData(resp.data);
+                        let newData = this.adapter.parseItemResponse(resp.data);
                         Object.assign(this, newData);
                         this.shadow = null;
 

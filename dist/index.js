@@ -744,6 +744,689 @@ function parseDataForInsertOrUpdate(itemData) {
   return resource;
 }
 
+// src/adapters/JsonApiAdapter.js
+var JsonApiAdapter = class {
+  /** @type {string} */
+  name = "jsonapi";
+  /**
+   * Whether a remote response represents a single resource (not a collection).
+   *
+   * @param {object} data - Raw HTTP response body
+   * @returns {boolean}
+   */
+  isSingleItemResponse(data) {
+    return !!(data && data.data && typeof data.data === "object" && !Array.isArray(data.data));
+  }
+  /**
+   * Extract pagination metadata from a remote document.
+   *
+   * @param {object} data - Raw HTTP response body
+   * @returns {{ totalRecords?: number, offset?: number }}
+   */
+  extractMetadata(data) {
+    const meta = {};
+    if (!data || !data.hasOwnProperty("meta") || typeof data.meta !== "object") {
+      return meta;
+    }
+    if (data.meta.hasOwnProperty("totalRecords")) {
+      meta.totalRecords = data.meta.totalRecords * 1;
+    }
+    if (data.meta.hasOwnProperty("offset")) {
+      meta.offset = data.meta.offset;
+    }
+    return meta;
+  }
+  /**
+   * Apply extracted metadata to a Collection instance.
+   *
+   * @param {object} collection - Collection instance
+   * @param {{ totalRecords?: number, offset?: number }} meta
+   */
+  applyMetadata(collection, meta) {
+    if (meta.totalRecords !== void 0) {
+      collection.total = meta.totalRecords;
+    }
+    if (meta.offset !== void 0) {
+      collection.offset = meta.offset;
+    }
+  }
+  /**
+   * Parse a single-item remote document into a canonical resource object.
+   *
+   * @param {object} data - Raw HTTP response body
+   * @param {object} [options]
+   * @returns {object} Hydrated resource ready for Item.loadFromData()
+   */
+  parseItemResponse(data, options = {}) {
+    this.validateItemRemoteDoc(data, options);
+    return parseItemData(data, options);
+  }
+  /**
+   * Validate that a remote document is suitable for a single Item load.
+   *
+   * @param {object} data - Raw HTTP response body
+   * @param {object} [options]
+   * @param {object} [options.collection] - Parent collection (for type inference)
+   */
+  validateItemRemoteDoc(data) {
+    if (data?.data?.constructor === Array) {
+      throw new Error("Invalid configuration: resource type is item but server response is collection");
+    }
+  }
+  /**
+   * Infer resource type from a single-item remote document.
+   *
+   * @param {object} data - Raw HTTP response body
+   * @returns {string|undefined}
+   */
+  inferItemType(data) {
+    return data?.data?.type;
+  }
+  /**
+   * Parse a collection remote document into canonical resource objects.
+   *
+   * @param {object} doc - Raw HTTP response body
+   * @returns {{ items: Array<object>, meta: object }}
+   */
+  parseCollectionResponse(doc) {
+    const items = parseCollectionData(doc);
+    const meta = this.extractMetadata(doc);
+    return { items, meta };
+  }
+  /**
+   * Apply list query parameters to a URL object before a collection fetch.
+   *
+   * @param {import('../URL.js').URL} url - Collection URL
+   * @param {{ type?: string, offset?: number, pageSize?: number }} params
+   */
+  applyListQuery(url, params) {
+    const { type, offset, pageSize } = params;
+    if (typeof offset !== "undefined" && offset !== null && type) {
+      url.parameters[`page[${type}][offset]`] = offset;
+    }
+    if (typeof pageSize !== "undefined" && pageSize !== null && type) {
+      url.parameters[`page[${type}][limit]`] = pageSize;
+    }
+  }
+  /**
+   * Serialize plain item data for a create (POST) request.
+   *
+   * @param {object|Array} itemData - Single item or array of items
+   * @param {{ type?: string }} [context]
+   * @returns {{ body: string, contentType: string, headers?: object }}
+   */
+  serializeForCreate(itemData, context = {}) {
+    const doc = { data: parseDataForInsertOrUpdate(itemData) };
+    if (context.type) {
+      doc.type = context.type;
+    }
+    return {
+      body: JSON.stringify(doc),
+      contentType: "application/vnd.api+json"
+    };
+  }
+  /**
+   * Serialize changed fields for an update (PATCH) request.
+   *
+   * @param {object} toUpdate - Resource patch with id, type, attributes, relationships
+   * @returns {{ body: string, contentType: string }}
+   */
+  serializeForUpdate(toUpdate) {
+    return {
+      body: JSON.stringify({ data: toUpdate }),
+      contentType: "application/vnd.api+json"
+    };
+  }
+  /**
+   * Serialize a runtime relationship value to JSON:API wire format.
+   *
+   * @param {object|Array|null} rel - Runtime relationship value
+   * @returns {object} JSON:API relationship: { data: ... }
+   */
+  serializeRelationship(rel) {
+    if (rel === null) {
+      return { data: null };
+    }
+    if (rel && typeof rel === "object" && !Array.isArray(rel)) {
+      if (rel.id) {
+        const result = { data: { id: rel.id } };
+        if (rel.type) {
+          result.data.type = rel.type;
+        }
+        return result;
+      }
+      if (rel.hasOwnProperty("toJSON")) {
+        const json = rel.toJSON();
+        const result = { data: { id: json.id } };
+        if (json.type) {
+          result.data.type = json.type;
+        }
+        return result;
+      }
+      return { data: null };
+    }
+    if (Array.isArray(rel)) {
+      return {
+        data: rel.map((item) => {
+          if (item && typeof item === "object") {
+            if (item.type && item.id) {
+              const result = { id: item.id };
+              if (item.type) {
+                result.type = item.type;
+              }
+              return result;
+            }
+            if (item.hasOwnProperty("toJSON")) {
+              const json = item.toJSON();
+              const result = { id: json.id };
+              if (json.type) {
+                result.type = json.type;
+              }
+              return result;
+            }
+          }
+          return item;
+        }).filter((item) => item && item.id)
+      };
+    }
+    return { data: null };
+  }
+};
+
+// src/adapters/plainUtils.js
+function getPath(obj, path) {
+  if (!obj || !path || typeof path !== "string") {
+    return void 0;
+  }
+  return path.split(".").reduce((current, key) => {
+    if (current == null || typeof current !== "object") {
+      return void 0;
+    }
+    return current[key];
+  }, obj);
+}
+function extractCollectionRows(doc, itemsPath) {
+  if (Array.isArray(doc)) {
+    return doc;
+  }
+  if (!doc || typeof doc !== "object") {
+    return [];
+  }
+  if (itemsPath) {
+    const rows = getPath(doc, itemsPath);
+    return Array.isArray(rows) ? rows : [];
+  }
+  if (Array.isArray(doc.data)) {
+    return doc.data;
+  }
+  if (Array.isArray(doc.items)) {
+    return doc.items;
+  }
+  if (Array.isArray(doc.results)) {
+    return doc.results;
+  }
+  return [];
+}
+function extractTotalRecords(doc, totalPath) {
+  if (!doc || typeof doc !== "object") {
+    return void 0;
+  }
+  if (totalPath) {
+    const value = getPath(doc, totalPath);
+    return value != null ? value * 1 : void 0;
+  }
+  for (const path of ["total", "count", "totalCount", "meta.totalRecords"]) {
+    const value = getPath(doc, path);
+    if (value != null) {
+      return value * 1;
+    }
+  }
+  return void 0;
+}
+function extractOffset(doc, offsetPath) {
+  if (!doc || typeof doc !== "object") {
+    return void 0;
+  }
+  if (offsetPath) {
+    const value = getPath(doc, offsetPath);
+    return value != null ? value : void 0;
+  }
+  for (const path of ["offset", "meta.offset"]) {
+    const value = getPath(doc, path);
+    if (value != null) {
+      return value;
+    }
+  }
+  return void 0;
+}
+
+// src/adapters/PlainRestAdapter.js
+var PlainRestAdapter = class {
+  /** @type {string} */
+  name = "plain";
+  /**
+   * @param {object} [opts]
+   * @param {string|null} [opts.itemsPath] - Dot path to item array (null = auto-detect)
+   * @param {string|null} [opts.itemPath] - Dot path to single item in a wrapper document
+   * @param {string|null} [opts.totalPath] - Dot path to total count (null = auto-detect)
+   * @param {string|null} [opts.offsetPath] - Dot path to offset (null = auto-detect)
+   * @param {string} [opts.idField] - Primary key field name
+   * @param {string|null} [opts.typeField] - Resource type field on wire objects
+   * @param {'offset'|'page'} [opts.paginationStyle] - Query param style for list fetches
+   * @param {string} [opts.offsetParam] - Offset query parameter name
+   * @param {string} [opts.limitParam] - Page size query parameter name
+   * @param {string} [opts.pageParam] - Page number query parameter name (1-based)
+   * @param {boolean} [opts.embedRelationships] - Embed nested objects on write (default: id stub)
+   */
+  constructor(opts = {}) {
+    this.itemsPath = opts.itemsPath ?? null;
+    this.itemPath = opts.itemPath ?? null;
+    this.totalPath = opts.totalPath ?? null;
+    this.offsetPath = opts.offsetPath ?? null;
+    this.idField = opts.idField ?? "id";
+    this.typeField = opts.typeField ?? "type";
+    this.paginationStyle = opts.paginationStyle ?? "offset";
+    this.offsetParam = opts.offsetParam ?? "offset";
+    this.limitParam = opts.limitParam ?? "limit";
+    this.pageParam = opts.pageParam ?? "page";
+    this.embedRelationships = opts.embedRelationships ?? false;
+  }
+  /**
+   * @param {object|Array} data
+   * @returns {boolean}
+   */
+  isSingleItemResponse(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return false;
+    }
+    if (this.itemPath) {
+      const item = getPath(data, this.itemPath);
+      if (Array.isArray(item)) {
+        return false;
+      }
+      if (item && typeof item === "object") {
+        return item[this.idField] != null;
+      }
+      return false;
+    }
+    const rows = extractCollectionRows(data, this.itemsPath);
+    if (rows.length > 0) {
+      return false;
+    }
+    if (data.data && Array.isArray(data.data)) {
+      return false;
+    }
+    if (data.data && typeof data.data === "object" && data.data[this.idField] != null) {
+      return true;
+    }
+    return data[this.idField] != null;
+  }
+  /**
+   * @param {object} data
+   * @returns {{ totalRecords?: number, offset?: number }}
+   */
+  extractMetadata(data) {
+    const meta = {};
+    const totalRecords = extractTotalRecords(data, this.totalPath);
+    if (totalRecords !== void 0) {
+      meta.totalRecords = totalRecords;
+    }
+    const offset = extractOffset(data, this.offsetPath);
+    if (offset !== void 0) {
+      meta.offset = offset;
+    }
+    return meta;
+  }
+  /**
+   * @param {object} collection
+   * @param {{ totalRecords?: number, offset?: number }} meta
+   */
+  applyMetadata(collection, meta) {
+    if (meta.totalRecords !== void 0) {
+      collection.total = meta.totalRecords;
+    }
+    if (meta.offset !== void 0) {
+      collection.offset = meta.offset;
+    }
+  }
+  /**
+   * @param {object} data
+   * @param {object} [options]
+   * @returns {object}
+   */
+  parseItemResponse(data, options = {}) {
+    this.validateItemRemoteDoc(data, options);
+    const raw = this.extractRawItem(data);
+    const defaultType = options.collection?.type ?? options.type;
+    return this.normalize(raw, defaultType);
+  }
+  /**
+   * @param {object} data
+   */
+  validateItemRemoteDoc(data) {
+    if (Array.isArray(data)) {
+      throw new Error("Invalid configuration: resource type is item but server response is collection");
+    }
+    if (this.itemPath) {
+      const item = getPath(data, this.itemPath);
+      if (Array.isArray(item)) {
+        throw new Error("Invalid configuration: resource type is item but server response is collection");
+      }
+      return;
+    }
+    if (data?.data && Array.isArray(data.data)) {
+      throw new Error("Invalid configuration: resource type is item but server response is collection");
+    }
+  }
+  /**
+   * @param {object} data
+   * @returns {string|undefined}
+   */
+  inferItemType(data) {
+    const raw = this.extractRawItem(data);
+    if (!raw || typeof raw !== "object") {
+      return void 0;
+    }
+    return raw[this.typeField];
+  }
+  /**
+   * @param {object|Array} doc
+   * @param {object} [options]
+   * @returns {{ items: Array<object>, meta: object }}
+   */
+  parseCollectionResponse(doc, options = {}) {
+    const rows = extractCollectionRows(doc, this.itemsPath);
+    const defaultType = options.type;
+    const items = rows.map((row) => this.normalize(row, defaultType));
+    const meta = this.extractMetadata(doc);
+    return { items, meta };
+  }
+  /**
+   * @param {import('../URL.js').URL} url
+   * @param {{ offset?: number, pageSize?: number }} params
+   */
+  applyListQuery(url, params) {
+    const { offset, pageSize } = params;
+    if (typeof pageSize === "undefined" || pageSize === null) {
+      return;
+    }
+    if (this.paginationStyle === "page") {
+      const safeOffset = typeof offset === "undefined" || offset === null ? 0 : offset;
+      const page = Math.floor(safeOffset / pageSize) + 1;
+      url.parameters[this.pageParam] = page;
+      url.parameters[this.limitParam] = pageSize;
+      return;
+    }
+    if (typeof offset !== "undefined" && offset !== null) {
+      url.parameters[this.offsetParam] = offset;
+    }
+    url.parameters[this.limitParam] = pageSize;
+  }
+  /**
+   * @param {object|Array} itemData
+   * @param {object} [context]
+   * @returns {{ body: string, contentType: string }}
+   */
+  serializeForCreate(itemData, context = {}) {
+    const defaultType = context.type;
+    let payload;
+    if (Array.isArray(itemData)) {
+      payload = itemData.map((item) => this.flattenForWire(this.coerceToCanonical(item, defaultType)));
+    } else {
+      payload = this.flattenForWire(this.coerceToCanonical(itemData, defaultType));
+    }
+    return {
+      body: JSON.stringify(payload),
+      contentType: "application/json"
+    };
+  }
+  /**
+   * @param {object} toUpdate
+   * @returns {{ body: string, contentType: string }}
+   */
+  serializeForUpdate(toUpdate) {
+    const relationships = {};
+    Object.entries(toUpdate.relationships || {}).forEach(([name, rel]) => {
+      relationships[name] = this.unwrapRelationship(rel);
+    });
+    const payload = this.flattenForWire({
+      id: toUpdate.id,
+      type: toUpdate.type,
+      attributes: toUpdate.attributes,
+      relationships
+    });
+    return {
+      body: JSON.stringify(payload),
+      contentType: "application/json"
+    };
+  }
+  /**
+   * @param {object|Array|null} rel
+   * @returns {object|Array|null|undefined}
+   */
+  serializeRelationship(rel) {
+    return this.unwrapRelationship(rel);
+  }
+  /**
+   * @param {object} data
+   * @returns {object}
+   * @private
+   */
+  extractRawItem(data) {
+    if (this.itemPath) {
+      return getPath(data, this.itemPath);
+    }
+    if (data?.data && typeof data.data === "object" && !Array.isArray(data.data)) {
+      return data.data;
+    }
+    return data;
+  }
+  /**
+   * @param {object} row
+   * @param {string|undefined} defaultType
+   * @returns {object}
+   */
+  normalize(row, defaultType) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      throw new Error("Invalid item data: must be an object");
+    }
+    if (row.attributes && typeof row.attributes === "object") {
+      const relationships2 = {};
+      Object.entries(row.relationships || {}).forEach(([name, value]) => {
+        if (value === null) {
+          relationships2[name] = null;
+        } else if (Array.isArray(value)) {
+          relationships2[name] = value.map((entry) => this.normalize(entry, defaultType));
+        } else {
+          relationships2[name] = this.normalize(value, defaultType);
+        }
+      });
+      const normalized2 = {
+        attributes: { ...row.attributes },
+        relationships: relationships2
+      };
+      if (row.id != null) {
+        normalized2.id = String(row.id);
+      }
+      if (row.type ?? defaultType) {
+        normalized2.type = row.type ?? defaultType;
+      }
+      return normalized2;
+    }
+    const attributes = {};
+    const relationships = {};
+    let id;
+    let type;
+    Object.entries(row).forEach(([key, value]) => {
+      if (key === this.idField) {
+        id = value;
+        return;
+      }
+      if (key === this.typeField) {
+        type = value;
+        return;
+      }
+      if (value === null || value === void 0) {
+        attributes[key] = value;
+        return;
+      }
+      if (Array.isArray(value)) {
+        if (value.length > 0 && value.every((entry) => this.isNestedResource(entry))) {
+          relationships[key] = value.map((entry) => this.normalize(entry, defaultType));
+        } else {
+          attributes[key] = value;
+        }
+        return;
+      }
+      if (this.isNestedResource(value)) {
+        relationships[key] = this.normalize(value, defaultType);
+        return;
+      }
+      attributes[key] = value;
+    });
+    const normalized = { attributes, relationships };
+    if (id != null) {
+      normalized.id = String(id);
+    }
+    if (type ?? defaultType) {
+      normalized.type = type ?? defaultType;
+    }
+    return normalized;
+  }
+  /**
+   * @param {*} value
+   * @returns {boolean}
+   * @private
+   */
+  isNestedResource(value) {
+    return value && typeof value === "object" && !Array.isArray(value) && value[this.idField] != null;
+  }
+  /**
+   * @param {object} data
+   * @param {string|undefined} defaultType
+   * @returns {object}
+   * @private
+   */
+  coerceToCanonical(data, defaultType) {
+    if (!data || typeof data !== "object") {
+      return data;
+    }
+    if (data.attributes || data.relationships) {
+      return data;
+    }
+    return this.normalize(data, defaultType);
+  }
+  /**
+   * @param {object} canonical
+   * @returns {object}
+   * @private
+   */
+  flattenForWire(canonical) {
+    if (!canonical || typeof canonical !== "object") {
+      return canonical;
+    }
+    const result = { ...canonical.attributes || {} };
+    if (canonical.id != null) {
+      result[this.idField] = canonical.id;
+    }
+    if (canonical.type != null && this.typeField) {
+      result[this.typeField] = canonical.type;
+    }
+    Object.entries(canonical.relationships || {}).forEach(([name, rel]) => {
+      if (rel === null) {
+        result[name] = null;
+        return;
+      }
+      if (Array.isArray(rel)) {
+        result[name] = rel.map((entry) => this.relationshipToWire(entry));
+        return;
+      }
+      result[name] = this.relationshipToWire(rel);
+    });
+    return result;
+  }
+  /**
+   * @param {object|null|undefined} rel
+   * @returns {object|null|undefined}
+   * @private
+   */
+  relationshipToWire(rel) {
+    if (!rel) {
+      return null;
+    }
+    if (this.embedRelationships && rel.attributes) {
+      return this.flattenForWire(rel);
+    }
+    const stub = { [this.idField]: rel.id ?? rel[this.idField] };
+    if ((rel.type ?? rel[this.typeField]) != null) {
+      stub[this.typeField] = rel.type ?? rel[this.typeField];
+    }
+    return stub;
+  }
+  /**
+   * @param {*} rel
+   * @returns {object|Array|null|undefined}
+   * @private
+   */
+  unwrapRelationship(rel) {
+    if (rel == null) {
+      return null;
+    }
+    if (rel.data !== void 0) {
+      if (rel.data === null) {
+        return null;
+      }
+      if (Array.isArray(rel.data)) {
+        return rel.data.map((entry) => ({ ...entry }));
+      }
+      return { ...rel.data };
+    }
+    if (Array.isArray(rel)) {
+      return rel.map((entry) => this.unwrapRelationship(entry));
+    }
+    if (typeof rel === "object") {
+      if (rel.attributes) {
+        return rel;
+      }
+      return { ...rel };
+    }
+    return rel;
+  }
+};
+
+// src/adapters/resolveAdapter.js
+var registry = /* @__PURE__ */ new Map([
+  ["jsonapi", new JsonApiAdapter()],
+  ["plain", new PlainRestAdapter()]
+]);
+var defaultAdapter = "jsonapi";
+function registerAdapter(name, adapter) {
+  if (!name || typeof name !== "string") {
+    throw new Error("Adapter name must be a non-empty string");
+  }
+  registry.set(name, adapter);
+}
+function setDefaultAdapter(adapter) {
+  defaultAdapter = adapter;
+}
+function getDefaultAdapter() {
+  return defaultAdapter;
+}
+function resolveAdapter(adapter) {
+  if (adapter && typeof adapter === "object") {
+    return adapter;
+  }
+  const name = typeof adapter === "string" ? adapter : defaultAdapter;
+  if (typeof name === "object") {
+    return name;
+  }
+  const resolved = registry.get(name);
+  if (!resolved) {
+    throw new Error(`Unknown data adapter: ${name}`);
+  }
+  return resolved;
+}
+
 // src/ItemView.js
 var ItemView = class {
   constructor(params) {
@@ -960,11 +1643,15 @@ var Item = class _Item {
     this.emptyview = null;
     this.uievents = [];
     this.callbacks = {};
+    this.adapter = null;
     try {
       Object.assign(this, parseOptions(options));
     } catch (e) {
       throw new Error("Error on Item init", e);
     }
+    this.adapter = resolveAdapter(
+      options.adapter ?? (options.collection && options.collection.adapter)
+    );
     this.storage = options.storage || new Storage(
       (() => {
         const storageOpts = Object.assign({}, options.ajaxOpts || {});
@@ -1128,6 +1815,9 @@ var Item = class _Item {
   loadFromRemote() {
     return this.loadFromDataSource();
   }
+  load(data) {
+    return data ? this.loadFromData(data) : this.loadFromRemote();
+  }
   /**
    * Load from data source (internal implementation)
    * @private
@@ -1152,7 +1842,7 @@ var Item = class _Item {
       let urlString = this.url.toString ? this.url.toString() : this.url;
       this.storage.read(this, urlString, {}).then((resp) => {
         let data = resp.data;
-        this.loadFromJSONAPIDoc(data).render();
+        this.loadFromRemoteDoc(data).render();
         this._trigger("load", this);
         loaders.forEach((loader) => {
           loader.remove();
@@ -1235,23 +1925,34 @@ var Item = class _Item {
     return returnView ? view : this;
   }
   /**
-   * Load from JSON API document
+   * Load from a remote API document (format determined by adapter).
+   *
+   * @param {object} data - Raw HTTP response body
+   * @returns {Item} This instance for chaining
    */
-  loadFromJSONAPIDoc(data) {
-    dbg("Load from JSONAPIDoc", data);
+  loadFromRemoteDoc(data) {
+    dbg("Load from remote doc", data);
     if (this.collection && !this.collection.type) {
-      this.type = data.data.type;
+      const inferredType = this.adapter.inferItemType(data);
+      if (inferredType) {
+        this.type = inferredType;
+      }
     }
-    if (data.data && data.data.constructor === Array) {
-      dbg("Invalid configuration: resource type is item but server response is collection", data);
-      throw new Error("Invalid configuration: resource type is item but server response is collection");
-    }
-    const parsedData = parseItemData(data);
+    this.adapter.validateItemRemoteDoc(data, { collection: this.collection });
+    const parsedData = this.adapter.parseItemResponse(data, { collection: this.collection });
     Object.assign(this, parsedData);
     if (this.url) {
       this.url = createURL(this.url);
     }
     return this;
+  }
+  /**
+   * @deprecated Use loadFromRemoteDoc() instead
+   * @param {object} data - Raw HTTP response body
+   * @returns {Item} This instance for chaining
+   */
+  loadFromJSONAPIDoc(data) {
+    return this.loadFromRemoteDoc(data);
   }
   /**
    * Load from data object
@@ -1435,65 +2136,7 @@ var Item = class _Item {
    * @returns {Object} JSON:API relationship format: { data: { type, id } } or { data: [{ type, id }, ...] } or { data: null }
    */
   _serializeRelationshipToWireFormat(rel) {
-    if (rel === null) {
-      return { data: null };
-    }
-    if (rel && typeof rel === "object" && !Array.isArray(rel)) {
-      if (rel.id) {
-        const result = {
-          data: {
-            id: rel.id
-          }
-        };
-        if (rel.type) {
-          result.data.type = rel.type;
-        }
-        return result;
-      } else if (rel.hasOwnProperty("toJSON")) {
-        const json = rel.toJSON();
-        const result = {
-          data: {
-            id: json.id
-          }
-        };
-        if (json.type) {
-          result.data.type = json.type;
-        }
-        return result;
-      } else {
-        return { data: null };
-      }
-    }
-    if (Array.isArray(rel)) {
-      return {
-        data: rel.map((item) => {
-          if (item && typeof item === "object") {
-            if (item.type && item.id) {
-              const result = {
-                id: item.id
-              };
-              if (item.type) {
-                result.type = item.type;
-              }
-              return result;
-            } else if (item.hasOwnProperty("toJSON")) {
-              const json = item.toJSON();
-              const result = {
-                type: json.type,
-                id: json.id
-              };
-              if (json.type) {
-                result.type = json.type;
-              }
-              return result;
-            }
-          }
-          return item;
-        }).filter((item) => item && item.type && item.id)
-        // Filter out invalid items
-      };
-    }
-    return { data: null };
+    return this.adapter.serializeRelationship(rel);
   }
   /**
    * Sync pending operations
@@ -1547,15 +2190,15 @@ var Item = class _Item {
         resolve(this);
         return;
       }
-      let patchData = JSON.stringify({ data: toUpdate });
+      const payload = this.adapter.serializeForUpdate(toUpdate);
       if (opts && opts.justSimulate) {
-        dbg(patchData);
+        dbg(payload.body);
         resolve(this);
         return;
       }
       let updateUrlString = this.updateUrl.toString ? this.updateUrl.toString() : this.updateUrl;
-      this.storage.update(this, updateUrlString, {}, patchData).then((resp) => {
-        let newData = parseItemData(resp.data);
+      this.storage.update(this, updateUrlString, { contentType: payload.contentType }, payload.body).then((resp) => {
+        let newData = this.adapter.parseItemResponse(resp.data);
         Object.assign(this, newData);
         this.shadow = null;
         if (options.rerender) {
@@ -2105,6 +2748,7 @@ var Collection = class {
     this.uievents = [];
     this.setAttrAsId = null;
     this.itemListeners = null;
+    this.adapter = null;
     this.callbacks = {};
     this.iterator = -1;
     trace("Collection init", opts);
@@ -2146,6 +2790,7 @@ var Collection = class {
     if (["page", "scroll"].indexOf(this.navtype) === -1) {
       throw new Error("Invalid navigations type. Should be page or scroll");
     }
+    this.adapter = resolveAdapter(opts.adapter);
     this.storage = opts.hasOwnProperty("storage") ? opts.storage : new Storage(
       (() => {
         const storageOpts = Object.assign({}, opts.ajaxOpts || {});
@@ -2342,17 +2987,9 @@ var Collection = class {
    */
   receiveRemoteData(data) {
     dbg("Remote data received", data);
-    const isSingleItem = data && data.data && typeof data.data === "object" && !Array.isArray(data.data);
-    if (isSingleItem) {
-      const hydratedItem = parseItemData(data);
-      if (data.hasOwnProperty("meta")) {
-        if (data.meta.hasOwnProperty("totalRecords")) {
-          this.total = data.meta.totalRecords * 1;
-        }
-        if (data.meta.hasOwnProperty("offset")) {
-          this.offset = data.meta.offset;
-        }
-      }
+    if (this.adapter.isSingleItemResponse(data)) {
+      const hydratedItem = this.adapter.parseItemResponse(data);
+      this.adapter.applyMetadata(this, this.adapter.extractMetadata(data));
       if (this.items.length === 0) {
         this.view.reset(true);
       }
@@ -2361,27 +2998,26 @@ var Collection = class {
       newItem.render(this.view, this.addontop);
       this._trigger("afterrender", this);
       return newItem;
-    } else {
-      const hydratedData = parseCollectionData(data);
-      const dataArray = this.extractMetadataAndData({ ...data, data: hydratedData });
-      if (dataArray == null) {
-        return;
+    }
+    const { items, meta } = this.adapter.parseCollectionResponse(data, { type: this.type });
+    this.adapter.applyMetadata(this, meta);
+    if (items == null) {
+      return;
+    }
+    if (items.constructor === Array) {
+      log("Append multiple items to collection");
+      if (this.items.length === 0) {
+        this.view.reset(true);
       }
-      if (dataArray.constructor === Array) {
-        log("Append multiple items to collection");
-        if (this.items.length === 0) {
-          this.view.reset(true);
+      const loadedItems = [];
+      items.forEach((item) => {
+        const loadedItem = this.loadItem(item);
+        if (loadedItem) {
+          loadedItems.push(loadedItem);
         }
-        const loadedItems = [];
-        dataArray.forEach((item) => {
-          const loadedItem = this.loadItem(item);
-          if (loadedItem) {
-            loadedItems.push(loadedItem);
-          }
-        });
-        this.render();
-        return loadedItems;
-      }
+      });
+      this.render();
+      return loadedItems;
     }
   }
   /**
@@ -2399,14 +3035,7 @@ var Collection = class {
     if (!data.hasOwnProperty("data")) {
       return data;
     }
-    if (data.hasOwnProperty("meta")) {
-      if (data.meta.hasOwnProperty("totalRecords")) {
-        this.total = data.meta.totalRecords * 1;
-      }
-      if (data.meta.hasOwnProperty("offset")) {
-        this.offset = data.meta.offset;
-      }
-    }
+    this.adapter.applyMetadata(this, this.adapter.extractMetadata(data));
     return data.data;
   }
   /**
@@ -2490,6 +3119,9 @@ var Collection = class {
   loadFromRemote() {
     return this.loadFromDataSource();
   }
+  load(data) {
+    return data ? this.loadFromData(data) : this.loadFromRemote();
+  }
   /**
    * Load from data source (internal implementation)
    * @private
@@ -2507,12 +3139,11 @@ var Collection = class {
         reject(new Error("No valid URL provided"));
         return;
       }
-      if (typeof this.offset !== "undefined" && this.offset !== null) {
-        this.url.parameters["page[" + this.type + "][offset]"] = this.offset;
-      }
-      if (typeof this.pageSize !== "undefined" && this.pageSize !== null) {
-        this.url.parameters["page[" + this.type + "][limit]"] = this.pageSize;
-      }
+      this.adapter.applyListQuery(this.url, {
+        type: this.type,
+        offset: this.offset,
+        pageSize: this.pageSize
+      });
       let urlString = this.url.toString ? this.url.toString() : this.url;
       this.storage.read(this, urlString, {}).then((res) => {
         if (this.navtype === "page") {
@@ -2572,16 +3203,13 @@ var Collection = class {
     if (Array.isArray(itemData)) {
       throw new Error("insert() expects a single item object. Use batchInsert() for multiple items.");
     }
-    let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemData) };
-    if (this.type) {
-      jsonApiDoc.type = this.type;
-    }
+    const payload = this.adapter.serializeForCreate(itemData, { type: this.type });
     return new Promise((resolve, reject) => {
       if (!this.insertUrl) {
         this.insertUrl = this.url;
       }
       let insertUrlString = this.insertUrl.toString ? this.insertUrl.toString() : this.insertUrl;
-      this.storage.create(this, insertUrlString, { contentType: "application/vnd.api+json" }, JSON.stringify(jsonApiDoc)).then((resp) => {
+      this.storage.create(this, insertUrlString, { contentType: payload.contentType }, payload.body).then((resp) => {
         let data = resp.data;
         let newItem = this.receiveRemoteData(data);
         log("newItem", newItem);
@@ -2610,16 +3238,13 @@ var Collection = class {
     if (itemsData.length === 0) {
       return Promise.resolve([]);
     }
-    let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemsData) };
-    if (this.type) {
-      jsonApiDoc.type = this.type;
-    }
+    const payload = this.adapter.serializeForCreate(itemsData, { type: this.type });
     return new Promise((resolve, reject) => {
       if (!this.insertUrl) {
         this.insertUrl = this.url;
       }
       let insertUrlString = this.insertUrl.toString ? this.insertUrl.toString() : this.insertUrl;
-      this.storage.create(this, insertUrlString, { contentType: "application/vnd.api+json" }, JSON.stringify(jsonApiDoc)).then((resp) => {
+      this.storage.create(this, insertUrlString, { contentType: payload.contentType }, payload.body).then((resp) => {
         let data = resp.data;
         const result = this.receiveRemoteData(data);
         const newItems = Array.isArray(result) ? result : result ? [result] : [];
@@ -2671,7 +3296,8 @@ var Collection = class {
       type: this.type,
       collection: this,
       uievents: this.uievents,
-      storage: this.storage
+      storage: this.storage,
+      adapter: this.adapter
     };
     if (this.setAttrAsId && itemData.id == null) {
       log("set item id from attribute", this.setAttrAsId, itemData);
@@ -2806,6 +3432,66 @@ var Filtering = class {
   }
 };
 
+// src/Sorting.js
+var Sorting = class {
+  constructor(sortHeader, collection) {
+    this.el = sortHeader;
+    this.collection = collection;
+    const $sorts = sortHeader.find("[data-sortfld]").data("instance", this.collection).on("click", this.sortNow.bind(this));
+  }
+  sortNow(ev) {
+    let $lnk = $(ev.currentTarget);
+    let fld = $lnk.data("sortfld");
+    let dir = $lnk.data("sortdir");
+    let inst = this.collection;
+    let sort = inst.url.parameters.hasOwnProperty("sort") ? inst.url.parameters.sort : "";
+    let sortArr = [];
+    sort.split(",").forEach(function(item) {
+      let res = /^(-*)([a-z0-9\-\_]+)$/.exec(item.trim());
+      if (!res)
+        return;
+      if (res[2] == fld)
+        return;
+      sortArr.push(item);
+    });
+    switch (dir) {
+      case "up":
+        sortArr.push("-" + fld);
+        $lnk.data("sortdir", "down");
+        $lnk.find(".sort-up").hide();
+        $lnk.find(".sort-down").show();
+        $lnk.find(".sort-default").hide();
+        break;
+      case "down":
+        $lnk.data("sortdir", null);
+        $lnk.find(".sort-up").hide();
+        $lnk.find(".sort-down").hide();
+        $lnk.find(".sort-default").show();
+        break;
+      default:
+        $lnk.data("sortdir", "up");
+        sortArr.push(fld);
+        $lnk.find(".sort-up").show();
+        $lnk.find(".sort-down").hide();
+        $lnk.find(".sort-default").hide();
+    }
+    let nxtSort = sortArr.join(",");
+    if (sort !== nxtSort) {
+      inst.url.parameters.sort = nxtSort;
+      inst.loadFromRemote();
+    }
+  }
+  destroy() {
+    if (this.el) {
+      $(this.el).find("[data-sortfld]").each(function(sort) {
+        $(this).off("click");
+        $(this).removeData("instance");
+      });
+    }
+    return this;
+  }
+};
+
 // src/utilities.js
 var utilities = {
   /**
@@ -2917,66 +3603,6 @@ var utilities = {
   }
 };
 
-// src/Sorting.js
-var Sorting = class {
-  constructor(sortHeader, collection) {
-    this.el = sortHeader;
-    this.collection = collection;
-    const $sorts = sortHeader.find("[data-sortfld]").data("instance", this.collection).on("click", this.sortNow.bind(this));
-  }
-  sortNow(ev) {
-    let $lnk = $(ev.currentTarget);
-    let fld = $lnk.data("sortfld");
-    let dir = $lnk.data("sortdir");
-    let inst = this.collection;
-    let sort = inst.url.parameters.hasOwnProperty("sort") ? inst.url.parameters.sort : "";
-    let sortArr = [];
-    sort.split(",").forEach(function(item) {
-      let res = /^(-*)([a-z0-9\-\_]+)$/.exec(item.trim());
-      if (!res)
-        return;
-      if (res[2] == fld)
-        return;
-      sortArr.push(item);
-    });
-    switch (dir) {
-      case "up":
-        sortArr.push("-" + fld);
-        $lnk.data("sortdir", "down");
-        $lnk.find(".sort-up").hide();
-        $lnk.find(".sort-down").show();
-        $lnk.find(".sort-default").hide();
-        break;
-      case "down":
-        $lnk.data("sortdir", null);
-        $lnk.find(".sort-up").hide();
-        $lnk.find(".sort-down").hide();
-        $lnk.find(".sort-default").show();
-        break;
-      default:
-        $lnk.data("sortdir", "up");
-        sortArr.push(fld);
-        $lnk.find(".sort-up").show();
-        $lnk.find(".sort-down").hide();
-        $lnk.find(".sort-default").hide();
-    }
-    let nxtSort = sortArr.join(",");
-    if (sort !== nxtSort) {
-      inst.url.parameters.sort = nxtSort;
-      inst.loadFromRemote();
-    }
-  }
-  destroy() {
-    if (this.el) {
-      $(this.el).find("[data-sortfld]").each(function(sort) {
-        $(this).off("click");
-        $(this).removeData("instance");
-      });
-    }
-    return this;
-  }
-};
-
 // src/KViews.js
 var KViews = class _KViews {
   /**
@@ -3037,7 +3663,8 @@ var KViews = class _KViews {
         "setAttrAsId",
         "itemListeners",
         "itemOn",
-        "headers"
+        "headers",
+        "adapter"
       ];
       if (options.url) {
         existingInstance.setUrl(options.url);
@@ -3051,6 +3678,9 @@ var KViews = class _KViews {
         }
       });
       Object.assign(existingInstance, safeUpdates);
+      if (safeUpdates.adapter) {
+        existingInstance.adapter = resolveAdapter(safeUpdates.adapter);
+      }
       if (safeUpdates.headers && existingInstance.storage && existingInstance.storage.defaultOptions) {
         existingInstance.storage.defaultOptions.headers = Object.assign(
           {},
@@ -3183,6 +3813,24 @@ var KViews = class _KViews {
     return instance;
   }
   static helpers = utilities;
+  /**
+   * Global default data adapter (name or instance). Defaults to 'jsonapi'.
+   */
+  static get defaultAdapter() {
+    return getDefaultAdapter();
+  }
+  static set defaultAdapter(adapter) {
+    setDefaultAdapter(adapter);
+  }
+  /**
+   * Register a custom data adapter by name.
+   *
+   * @param {string} name
+   * @param {object} adapter
+   */
+  static registerAdapter(name, adapter) {
+    registerAdapter(name, adapter);
+  }
 };
 Object.defineProperty(KViews, "baseUrl", {
   enumerable: true,
@@ -3313,8 +3961,10 @@ export {
   Filtering,
   Item,
   ItemView,
+  JsonApiAdapter,
   KViews,
   Paging,
+  PlainRestAdapter,
   Sorting,
   Storage,
   URL,
@@ -3325,8 +3975,12 @@ export {
   index_default as default,
   error,
   getBoundObjects,
+  getDefaultAdapter,
   log,
   parseOptions,
+  registerAdapter,
+  resolveAdapter,
+  setDefaultAdapter,
   template,
   trace,
   uid,

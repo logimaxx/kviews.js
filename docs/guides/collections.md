@@ -41,6 +41,7 @@ const collection = KViews.createCollectionInstance('#posts', {
 const collection = KViews.createCollectionInstance('#posts', {
     url: '/api/posts',           // API endpoint
     type: 'posts',                // Resource type
+    adapter: 'jsonapi',           // Wire format: 'jsonapi' (default) or 'plain' — see Adapters guide
     pageSize: 20,                 // Items per page
     offset: 0,                    // Initial offset
     template: myTemplate,         // Custom template
@@ -59,6 +60,21 @@ const collection = KViews.createCollectionInstance('#posts', {
     }
 });
 ```
+
+### Plain REST backend
+
+If your API returns flat JSON instead of JSON:API, use the plain adapter:
+
+```javascript
+const collection = KViews.createCollectionInstance('#users', {
+    url: '/api/users',
+    type: 'users',
+    adapter: 'plain',
+    pageSize: 20,
+});
+```
+
+See **[Adapters guide](./adapters.md)** for response shapes, pagination, and customization.
 
 ## Loading Data
 

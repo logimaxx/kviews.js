@@ -1,13 +1,15 @@
 # KViews
 
+[![npm version](https://img.shields.io/npm/v/kviews.svg)](https://www.npmjs.com/package/kviews)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A modern, class-based JavaScript library for binding JSON API data to DOM elements. KViews provides a clean, declarative way to work with REST APIs and render data using Handlebars templates. **Runtime requirements:** [jQuery](https://jquery.com/) (DOM and selectors) and [Handlebars](https://handlebarsjs.com/) (templates); both are `peerDependencies` when you install from npm.
+A modern, class-based JavaScript library for binding API data to DOM elements. KViews provides a clean, declarative way to work with REST APIs (JSON:API by default, plain REST via adapters) and render data using Handlebars templates. **Runtime requirements:** [jQuery](https://jquery.com/) (DOM and selectors) and [Handlebars](https://handlebarsjs.com/) (templates); both are `peerDependencies` when you install from npm.
 
 ## Features
 
 - ✅ **Class-based architecture** - Modern ES6 classes for better organization
-- ✅ **JSON API support** - Full JSON API specification support
+- ✅ **JSON API support** - Full JSON API specification support (default adapter)
+- ✅ **Plain REST adapter** - Flat JSON APIs via `adapter: 'plain'`
 - ✅ **Template rendering** - Handlebars template support for flexible rendering
 - ✅ **Event system** - Comprehensive event handling for reactivity
 - ✅ **jQuery required** - Uses jQuery exclusively for DOM manipulation
@@ -28,12 +30,12 @@ ES module import (browser app with your bundler):
 
 ```javascript
 import KViews from 'kviews';
-// named exports: Item, Collection, Storage, …
+// or: import { KViews, Collection, Item, Storage } from 'kviews';
 ```
 
 Peer dependencies: **Handlebars** and **jQuery** must be installed in your app (`npm install handlebars jquery`).
 
-The published package includes `src/` (ESM) and `dist/` (IIFE bundle). Run `npm run build` before `npm pack` / `npm publish`; `prepack` runs the build automatically.
+The **npm tarball** ships **`dist/`** only: `dist/index.js` is the ES module entry (`"main"` / `"exports"`), and `dist/kviews.js` / `dist/kviews.min.js` are IIFE bundles for `<script>` tags. The `src/` tree lives in the git repository for development. `npm publish` runs `prepack`, which runs `npm run build`, so published `dist/` always matches the release.
 
 ### Using Bundle (No Build Step Required)
 
@@ -45,13 +47,13 @@ Download `dist/kviews.js` and include it in your HTML:
 <script src="./dist/kviews.js"></script>
 ```
 
-### Using ES6 Modules
+### Using ES6 modules
 
 ```bash
 npm install kviews
 ```
 
-Or copy the `src/` directory to your project.
+Use `import` from the `kviews` package (see **Quick Start** below). To hack on the library itself, clone this repo and import from `src/index.js`.
 
 ### Requirements
 
@@ -109,8 +111,9 @@ Load **jQuery** before **Handlebars**, then KViews (bundle or your module entry)
     </div>
 
     <script type="module">
-        import { KViews } from './src/index.js';
-        
+        // With a bundler (Vite, webpack, etc.) after `npm install kviews`:
+        import KViews from 'kviews';
+
         KViews.createCollectionInstance('#posts', {
             url: '/api/posts',
             type: 'posts'
@@ -233,11 +236,16 @@ With jQuery, `$.fn.kviews.baseUrl`, `basePath`, and `defaultHeaders` mirror the 
 - `render()` - Render item
 - `on(event, callback)` - Event listeners
 
-## Contributing & security
+## Contributing, support, and security
 
-- [CONTRIBUTING.md](./CONTRIBUTING.md) — how to run tests and submit changes  
-- [SECURITY.md](./SECURITY.md) — how to report security issues  
-- [CHANGELOG.md](./CHANGELOG.md) — release notes  
+We welcome issues and pull requests.
+
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** — setup, tests, build, PR expectations  
+- **[SUPPORT.md](./SUPPORT.md)** — where to ask questions and report bugs  
+- **[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)** — community guidelines  
+- **[SECURITY.md](./SECURITY.md)** — **private** vulnerability reporting  
+- **[CHANGELOG.md](./CHANGELOG.md)** — release notes  
+- **[RELEASE_FLOW.md](./RELEASE_FLOW.md)** — checklist for maintainers cutting a release  
 
 ## GitHub Pages
 
@@ -255,9 +263,9 @@ The site will be available at **`https://logimaxx.github.io/kviews/`** (replace 
 
 Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 
-- **[API Reference](./docs/api/)** - Complete API documentation
-- **[User Guides](./docs/guides/)** - Step-by-step guides
-- **[Examples](./docs/examples/)** - Code examples
+- **[API Reference](./docs/api/)** — class and method reference  
+- **[User guides](./docs/guides/)** — step-by-step tutorials ([adapters](./docs/guides/adapters.md) for JSON:API vs plain REST)
+- **[Examples](./docs/examples/)** — sample HTML and JSON:API payloads
 
 ## Development
 
@@ -337,13 +345,11 @@ kviews.js/
 └── build.js             # Build script
 ```
 
-## Browser Support
+## Browser support
 
-- Chrome 61+
-- Firefox 60+
-- Safari 11+
-- Edge 16+
-- IE11+ (with polyfills for bundle version)
+- **ES modules** (`import … from 'kviews'` via a bundler): evergreen browsers aligned with baseline ES modules (approx. Chrome 61+, Firefox 60+, Safari 11+, Edge 16+).
+
+- **IIFE bundle** (`dist/kviews.js`): same modern JavaScript assumptions as the build (see `build.js`). Very old browsers (for example IE 11) are **not** a supported target unless you fork and downgrade the toolchain; use an evergreen browser or upgrade client environments.
 
 ## JSON API Format
 
@@ -370,79 +376,17 @@ KViews expects data in JSON API format:
 }
 ```
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow existing code style
-- Add tests for new features
-- Update documentation as needed
-- Ensure all tests pass
-
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see [LICENSE](./LICENSE).
 
 ## Changelog
 
-### Version 2.0.0 (Breaking Changes)
-
-**Event System Refactoring:**
-- ✅ **Unified event system** - Removed dual callback system (`onafterrender`, `onbeforeload` properties)
-- ✅ **New event methods** - Added `off()`, `once()`, `emit()`, `hasListeners()` methods
-- ✅ **Standardized events** - All events now use `on()` method exclusively
-- ✅ **New Item events** - Added `beforeload`, `load`, `afterrender` events (previously missing or inconsistent)
-- ✅ **Collection events** - Added `beforeload` event
-- ✅ **Return value consistency** - `Collection.onupdate()` now returns `this` for chaining
-
-**Breaking Changes:**
-- ❌ **Removed:** `collection.onafterrender` and `collection.onbeforeload` properties
-- ❌ **Removed:** `item.onafterrender` property
-- ✅ **Migration:** Use `collection.on('afterrender', callback)` instead of `collection.onafterrender = callback`
-- ✅ **Migration:** Use `collection.on('beforeload', callback)` instead of `collection.onbeforeload = callback`
-
-**Improvements:**
-- Event listeners can now be removed with `off()`
-- One-time listeners supported with `once()`
-- Manual event triggering with `emit()`
-- Consistent event API across Collection and Item classes
-
-### Version 1.0.3
-
-- Fixed bundle to properly expose `KViews.createCollectionInstance` and `KViews.createItemInstance`
-- Refactored Paging to ES6 class
-- Templates now expose attributes directly (use `{{title}}` instead of `{{attributes.title}}`)
-- Utilities exposed via `KViews.helpers` (recommended access method)
-- Removed `getUtilities()` instance methods
-- Storage class now uses Fetch API exclusively (no jQuery dependency)
-- Added comprehensive test suite (Vitest + Playwright)
-- Improved build script to generate both normal and minified bundles
-
-### Version 1.0.0
-
-- Initial release
-- Class-based architecture
-- JSON API support
-- Handlebars templating
-- Event system
-- Form utilities
-- Bundle and ES6 module support
+Version history and migration notes live in **[CHANGELOG.md](./CHANGELOG.md)**.
 
 ## Support
 
-For issues, questions, or contributions:
-
-- Open an issue on GitHub
-- Check the [documentation](./docs/)
-- Review [examples](./docs/examples/)
+See **[SUPPORT.md](./SUPPORT.md)** for documentation links, GitHub issues, and security reporting.
 
 ## Acknowledgments
 

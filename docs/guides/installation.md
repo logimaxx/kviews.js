@@ -8,7 +8,7 @@ Learn how to install and set up KViews in your project.
 
 ### Method 1: Bundle (Recommended for Simple Projects)
 
-The bundle version doesn't require a module system and works in any browser.
+The bundle version does not require a module system and targets modern browsers (same baseline as this project’s build).
 
 #### Download Bundle
 
@@ -43,54 +43,49 @@ Download `dist/kviews.js` and include it in your HTML:
 ```
 
 **Advantages:**
-- ✅ No module system required
-- ✅ Works without a local server
-- ✅ Simple to use
-- ✅ Works in older browsers (with polyfills)
+- No module system required
+- Simple to drop into static HTML
 
 **Disadvantages:**
-- ❌ Larger file size (includes all code)
-- ❌ No tree-shaking
 
-### Method 2: ES6 Modules (Recommended for Modern Projects)
+- Larger download than a tree‑shaken app bundle when you ship the full library globally
 
-Use ES6 modules for better code organization and tree-shaking.
+### Method 2: ES modules from npm
 
-#### Copy Source Files
-
-Copy the `src/` directory to your project:
+The published **`kviews`** package exposes **`dist/index.js`** as its ES module entry. Install peers and resolve `kviews` through your bundler (Vite, webpack, Rollup, and similar).
 
 ```bash
-cp -r src/ /path/to/your/project/
+npm install kviews handlebars jquery
 ```
 
-#### Import in Your Code
+```javascript
+import KViews from 'kviews';
+// named exports: Collection, Item, Storage, ...
+```
+
+Typical HTML (peers global; app code bundled or as a separate module):
 
 ```html
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script type="module">
-    import { KViews } from './src/index.js';
-    
-    $(document).ready(function() {
-        KViews.createCollectionInstance($('#collection'), {
-            url: '/api/posts',
-            type: 'posts'
-        });
-    });
-</script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
+<script type="module" src="./main.js"></script>
 ```
 
+Inside `main.js`, `import KViews from 'kviews'` is resolved by your bundler.
+
+**Fork or vendor `src/` (advanced):** only when you develop KViews itself—clone the repo and import from `./src/index.js`. The npm tarball does **not** ship `src/`.
+
 **Advantages:**
-- ✅ Better code organization
-- ✅ Tree-shaking support
-- ✅ Smaller bundle size (if using bundler)
-- ✅ Modern JavaScript features
+
+- Tree-shaking and modern tooling
+- Same API as the IIFE bundle
 
 **Disadvantages:**
-- ❌ Requires HTTP server (not `file://`)
-- ❌ Requires modern browser with ES6 module support
 
-### Method 3: Build Your Own Bundle
+- Needs a build step for most apps
+- ES `import` in the browser alone does not resolve the package name—you need a bundler or import maps
+
+### Method 3: Build your own bundle
 
 Create a custom bundle using a bundler:
 
@@ -138,24 +133,18 @@ module.exports = {
 npx webpack
 ```
 
-#### Using Build Script
+#### This repository's build script
 
-The project includes a build script:
+When working from a clone of this repository:
 
 ```bash
-# Install dependencies
 npm install
-
-# Build bundle
 npm run build
-
-# Build minified bundle
-npm run build:min
 ```
 
-This creates `dist/kviews.js` ready to use.
+This refreshes `dist/index.js` (npm ESM entry), `dist/kviews.js`, `dist/kviews.min.js`, and sourcemaps. Publishing runs `prepack`, which invokes the same build.
 
-#### Using esbuild Directly
+#### Using esbuild directly
 
 ```bash
 npm install --save-dev esbuild
@@ -166,50 +155,32 @@ npx esbuild src/index.js --bundle --format=iife --global-name=KViews --outfile=d
 
 ## Requirements
 
-### Required
-
-- **Handlebars** - Template compilation
-  ```html
-  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
-  ```
-
-### Required
-
-- **jQuery** - Required for DOM manipulation
+- **jQuery** — load first; required for DOM manipulation
   ```html
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   ```
 
-## Browser Support
+- **Handlebars** — load second; template compilation
+  ```html
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
+  ```
 
-### Bundle Version
-- Works in all modern browsers
-- IE11+ with polyfills
+## Browser support
 
-### ES6 Modules Version
-- Chrome 61+
-- Firefox 60+
-- Safari 11+
-- Edge 16+
+- **Bundled workflow** (`dist/kviews.js`): targets modern JavaScript (same as `build.js`; no guarantees for legacy IE without forking).
+- **ES modules** (`dist/index.js`, via `"kviews"` in a bundler): evergreen browsers aligned with baseline ES modules (for example Chrome 61+, Firefox 60+, Safari 11+, Edge 16+).
 
-## CDN Usage (Future)
+## CDN usage (bundle)
 
-If published to npm and CDN:
+With jQuery and Handlebars loaded first, you can point a `<script>` tag at npm CDNs—for example jsDelivr or unpkg—for the **IIFE bundle only** (`dist/kviews.js`):
 
 ```html
-<!-- jQuery and Handlebars are required before KViews -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
-<!-- Bundle version -->
-<script src="https://unpkg.com/kviews@latest/dist/kviews.js"></script>
-
-<!-- Or ES6 modules -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
-<script type="module">
-    import { KViews } from 'https://unpkg.com/kviews@latest/src/index.js';
-</script>
+<script src="https://cdn.jsdelivr.net/npm/kviews@latest/dist/kviews.js"></script>
 ```
+
+For **bare `import 'kviews'`** in browser modules, configure your bundler or use [import maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap); unpinned CDN `import` of `dist/index.js` is possible but you must pin a version URL and handle peer globals yourself.
 
 ## Verifying Installation
 
@@ -223,8 +194,8 @@ if (typeof KViews !== 'undefined') {
     console.error('KViews not found');
 }
 
-// ES6 modules version
-import { KViews } from './src/index.js';
+// ES modules version (consumers typically use package name resolved by bundler)
+import KViews from 'kviews';
 log('KViews loaded:', KViews);
 ```
 

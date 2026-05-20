@@ -15,6 +15,7 @@ export { Filtering } from './Filtering.js';
 export { Sorting } from './Sorting.js';
 export { Paging } from './Paging.js';
 export { utilities } from './utilities.js';
+export { JsonApiAdapter, PlainRestAdapter, resolveAdapter, registerAdapter, setDefaultAdapter, getDefaultAdapter } from './adapters/index.js';
 export * from './utils.js';
 
 // Export KViews as default for bundle compatibility

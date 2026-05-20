@@ -113,10 +113,13 @@ item.loadFromData({
 });
 ```
 
-### Loading from JSON API Document
+### Loading from a remote API document
+
+Use `loadFromRemoteDoc()` after fetch, or let `loadFromRemote()` call it for you. The active **adapter** (JSON:API by default) controls parsing:
 
 ```javascript
-item.loadFromJSONAPIDoc({
+// JSON:API (default adapter)
+item.loadFromRemoteDoc({
     data: {
         id: '1',
         type: 'posts',
@@ -139,7 +142,12 @@ item.loadFromJSONAPIDoc({
         }
     ]
 });
+
+// Plain REST (adapter: 'plain')
+item.loadFromRemoteDoc({ id: 1, title: 'My Post', author: { id: 123, name: 'John Doe' } });
 ```
+
+`loadFromJSONAPIDoc()` is a deprecated alias for `loadFromRemoteDoc()`. See [Adapters guide](./adapters.md).
 
 ## Accessing Data
 
@@ -413,10 +421,12 @@ const json = item.toJSON();
 // }
 ```
 
-### Loading from JSON API
+### Loading from a remote document
+
+Prefer `loadFromRemoteDoc()` (works with any adapter). Example with default JSON:API:
 
 ```javascript
-item.loadFromJSONAPIDoc({
+item.loadFromRemoteDoc({
     data: {
         id: '1',
         type: 'posts',
@@ -440,6 +450,8 @@ item.loadFromJSONAPIDoc({
     ]
 });
 ```
+
+For non–JSON:API backends, set `adapter: 'plain'` on the item or collection. See [Adapters guide](./adapters.md).
 
 ## Common Patterns
 

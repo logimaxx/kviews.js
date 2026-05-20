@@ -1,5 +1,7 @@
 # KViews - AI Development Guide
 
+> **Audience:** This file is a dense, reference-style companion for tooling (for example AI-assisted development) and power users. For human-oriented tutorials and the canonical API write-ups, start with **[docs/README.md](./README.md)**, **[guides/getting-started.md](./guides/getting-started.md)**, and the **[api/](./api/)** folder.
+
 **Purpose:** Complete reference documentation for AI-assisted development with KViews  
 **Target:** AI systems helping developers build business applications  
 **Version:** 2.0.0
@@ -10,8 +12,9 @@
 
 ### Core Concepts
 
-- **Collection**: Manages a list of items from JSON:API endpoint
-- **Item**: Represents a single resource from JSON:API endpoint
+- **Collection**: Manages a list of items from a remote API
+- **Item**: Represents a single resource
+- **Data adapter**: Parses and serializes API wire format (default: JSON:API; also `'plain'` REST)
 - **View**: Handles DOM rendering (CollectionView for lists, ItemView for details)
 - **Template**: Handlebars template for data formatting
 - **Storage**: HTTP operations layer (Fetch API)
@@ -53,6 +56,15 @@ KViews.baseUrl = 'https://api.example.com';
 // Default HTTP headers for every request (Fetch); per-instance `headers` overrides same keys
 KViews.defaultHeaders = { Authorization: 'Bearer ' + token };
 
+// Data adapters — default is JSON:API; use plain REST when backend returns flat JSON
+KViews.createCollectionInstance(selector, {
+    url: '/api/users',
+    type: 'users',
+    adapter: 'plain',  // or 'jsonapi' (default), custom instance, or registered name
+});
+KViews.defaultAdapter = 'plain';
+KViews.registerAdapter('my-api', myAdapter);
+
 // Helpers
 KViews.helpers.fillForm('#form', item);
 KViews.helpers.captureFormSubmit('#form', callback);
@@ -87,6 +99,7 @@ collection.items → Array<Item>
 collection.length → Number (getter)
 collection.url → URL
 collection.type → String
+collection.adapter → Object   // JsonApiAdapter | PlainRestAdapter | custom
 collection.view → CollectionView
 collection.paging → Paging|null
 collection.filtering → Filtering|null
@@ -97,7 +110,9 @@ collection.filtering → Filtering|null
 ```javascript
 // Loading
 item.loadFromRemote() → Promise<Item>
+item.loadFromRemoteDoc(data) → Item   // parse HTTP body via adapter
 item.loadFromData(data) → Item
+item.loadFromJSONAPIDoc(data) → Item  // deprecated alias of loadFromRemoteDoc
 
 // CRUD
 item.update(data, opts) → Promise<Item>
@@ -118,6 +133,7 @@ item.id → String|null
 item.type → String
 item.attributes → Object
 item.relationships → Object
+item.adapter → Object
 item.views → Array<ItemView>
 item.collection → Collection|null
 ```
@@ -622,9 +638,11 @@ For comparisons (`eq`, `gt`, etc.), register your own helpers (for example with 
 
 ## Data Format
 
-### JSON:API Input Format
+KViews uses a **canonical runtime model** (`id`, `type`, `attributes`, `relationships`) regardless of wire format. **Adapters** convert between HTTP JSON and that model. Default adapter: **`jsonapi`**. See **[guides/adapters.md](./guides/adapters.md)** for plain REST and custom adapters.
 
-KViews expects JSON:API format:
+### JSON:API wire format (default adapter)
+
+When `adapter` is omitted or `'jsonapi'`, KViews expects JSON:API documents:
 
 ```json
 {
@@ -661,6 +679,32 @@ KViews expects JSON:API format:
   ]
 }
 ```
+
+### Plain REST wire format (`adapter: 'plain'`)
+
+Flat JSON — no `attributes` wrapper required on the wire:
+
+```json
+{
+  "data": [
+    { "id": 1, "title": "Post", "author": { "id": 9, "name": "Ada" } }
+  ],
+  "total": 100,
+  "offset": 0
+}
+```
+
+Root array responses and `{ items: [...] }` / `{ results: [...] }` are also supported. Nested objects with an `id` field become relationships after parsing. Writes use `application/json` flat objects.
+
+```javascript
+KViews.createCollectionInstance('#posts', {
+    url: '/api/posts',
+    type: 'posts',
+    adapter: 'plain',
+});
+```
+
+Custom shapes: `new PlainRestAdapter({ itemsPath: 'results.items', totalPath: 'results.total' })`.
 
 ### Runtime Data Format
 

@@ -12,6 +12,7 @@ new Collection(options)
 
 When using the constructor directly (instead of `KViews.createCollectionInstance`), common HTTP-related options include:
 
+- `adapter` (String|Object) - Data adapter name (`'jsonapi'`, `'plain'`) or adapter instance (default: `'jsonapi'`). See [Adapters Guide](../guides/adapters.md).
 - `headers` (Object) - Default headers for this collection’s `Storage` (merged with `KViews.defaultHeaders` on each request)
 - `ajaxOpts` (Object) - Constructor options for the internal `Storage` (merged with `headers`)
 - `storage` (Storage) - Use a custom `Storage` instead of the default
@@ -43,6 +44,9 @@ Total number of items available.
 
 #### `type` (String)
 Resource type name.
+
+#### `adapter` (Object)
+Resolved data adapter instance (default: JSON:API). Items created by this collection inherit the same adapter.
 
 #### `template` (Function)
 Handlebars template function for items.

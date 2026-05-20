@@ -1,7 +1,7 @@
 import { dbg, log, parseOptions, createOverlay, trace } from './utils.js';
 import { createURL } from './URL.js';
 import { Storage } from './Storage.js';
-import { parseCollectionData, parseItemData, parseDataForInsertOrUpdate } from './dataParser.js';
+import { resolveAdapter } from './adapters/index.js';
 import { Item } from './Item.js';
 import { ItemView } from './ItemView.js';
 import { CollectionView } from './CollectionView.js';
@@ -31,6 +31,7 @@ export class Collection {
         this.uievents = [];
         this.setAttrAsId = null;
         this.itemListeners = null; // Listeners to apply to all items created in this collection
+        this.adapter = null;
 
         this.callbacks = {};
         this.iterator = -1;
@@ -84,6 +85,8 @@ export class Collection {
         if (["page", "scroll"].indexOf(this.navtype) === -1) {
             throw new Error("Invalid navigations type. Should be page or scroll");
         }
+
+        this.adapter = resolveAdapter(opts.adapter);
 
         this.storage = opts.hasOwnProperty("storage")
             ? opts.storage
@@ -313,26 +316,10 @@ export class Collection {
     receiveRemoteData(data) {
         dbg("Remote data received", data);
 
-        // Check if response is a single item or collection
-        // Single item: data.data is an object (not array)
-        // Collection: data.data is an array
-        const isSingleItem = data && data.data && typeof data.data === 'object' && !Array.isArray(data.data);
+        if (this.adapter.isSingleItemResponse(data)) {
+            const hydratedItem = this.adapter.parseItemResponse(data);
+            this.adapter.applyMetadata(this, this.adapter.extractMetadata(data));
 
-        if (isSingleItem) {
-            // Single item response (e.g., from append/create) - parse as item, not collection
-            const hydratedItem = parseItemData(data);
-            
-            // Extract metadata if available
-            if (data.hasOwnProperty("meta")) {
-                if (data.meta.hasOwnProperty("totalRecords")) {
-                    this.total = data.meta.totalRecords * 1;
-                }
-                if (data.meta.hasOwnProperty("offset")) {
-                    this.offset = data.meta.offset;
-                }
-            }
-
-            // Add single item to collection (don't clear existing items)
             if (this.items.length === 0) {
                 this.view.reset(true);
             }
@@ -341,36 +328,31 @@ export class Collection {
             newItem.render(this.view, this.addontop);
             this._trigger('afterrender', this);
             return newItem;
-        } else {
-            // Collection response - parse as collection
-            const hydratedData = parseCollectionData(data);
+        }
 
-            // Extract metadata and return hydrated data array
-            const dataArray = this.extractMetadataAndData({ ...data, data: hydratedData });
+        const { items, meta } = this.adapter.parseCollectionResponse(data, { type: this.type });
+        this.adapter.applyMetadata(this, meta);
 
-            if (dataArray == null) {
-                return;
+        if (items == null) {
+            return;
+        }
+
+        if (items.constructor === Array) {
+            log("Append multiple items to collection");
+            if (this.items.length === 0) {
+                this.view.reset(true);
             }
 
-            // Received data is a collection (array)
-            if (dataArray.constructor === Array) {
-                log("Append multiple items to collection");
-                if (this.items.length === 0) {
-                    this.view.reset(true);
+            const loadedItems = [];
+            items.forEach((item) => {
+                const loadedItem = this.loadItem(item);
+                if (loadedItem) {
+                    loadedItems.push(loadedItem);
                 }
-                
-                // Load all items and collect them for return
-                const loadedItems = [];
-                dataArray.forEach((item) => {
-                    const loadedItem = this.loadItem(item);
-                    if (loadedItem) {
-                        loadedItems.push(loadedItem);
-                    }
-                });
-                
-                this.render();
-                return loadedItems; // Return array of items for batchInsert()
-            }
+            });
+
+            this.render();
+            return loadedItems;
         }
     }
 
@@ -391,17 +373,7 @@ export class Collection {
             return data;
         }
 
-        // Extract metadata
-        if (data.hasOwnProperty("meta")) {
-            if (data.meta.hasOwnProperty("totalRecords")) {
-                this.total = data.meta.totalRecords * 1;
-            }
-            if (data.meta.hasOwnProperty("offset")) {
-                this.offset = data.meta.offset;
-            }
-        }
-        
-        // Return hydrated data array (relationships already resolved)
+        this.adapter.applyMetadata(this, this.adapter.extractMetadata(data));
         return data.data;
     }
 
@@ -504,6 +476,10 @@ export class Collection {
         return this.loadFromDataSource();
     }
 
+    load(data) {
+        return data ? this.loadFromData(data):this.loadFromRemote();
+    }
+
     /**
      * Load from data source (internal implementation)
      * @private
@@ -527,13 +503,11 @@ export class Collection {
                 return;
             }
 
-            if (typeof this.offset !== "undefined" && this.offset !== null) {
-                this.url.parameters["page[" + this.type + "][offset]"] = this.offset;
-            }
-
-            if (typeof this.pageSize !== "undefined" && this.pageSize !== null) {
-                this.url.parameters["page[" + this.type + "][limit]"] = this.pageSize;
-            }
+            this.adapter.applyListQuery(this.url, {
+                type: this.type,
+                offset: this.offset,
+                pageSize: this.pageSize,
+            });
 
             // Convert URL object to string for Storage
             let urlString = this.url.toString ? this.url.toString() : this.url;
@@ -611,10 +585,7 @@ export class Collection {
             throw new Error('insert() expects a single item object. Use batchInsert() for multiple items.');
         }
 
-        let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemData) };
-        if (this.type) {
-            jsonApiDoc.type = this.type;
-        }
+        const payload = this.adapter.serializeForCreate(itemData, { type: this.type });
 
         return new Promise((resolve, reject) => {
             if (!this.insertUrl) {
@@ -625,7 +596,7 @@ export class Collection {
             let insertUrlString = this.insertUrl.toString ? this.insertUrl.toString() : this.insertUrl;
 
             this.storage
-                .create(this, insertUrlString, { contentType: "application/vnd.api+json" }, JSON.stringify(jsonApiDoc))
+                .create(this, insertUrlString, { contentType: payload.contentType }, payload.body)
                 .then((resp) => {
                     let data = resp.data;
                     let newItem = this.receiveRemoteData(data);
@@ -660,10 +631,7 @@ export class Collection {
             return Promise.resolve([]);
         }
 
-        let jsonApiDoc = { data: parseDataForInsertOrUpdate(itemsData) };
-        if (this.type) {
-            jsonApiDoc.type = this.type;
-        }
+        const payload = this.adapter.serializeForCreate(itemsData, { type: this.type });
 
         return new Promise((resolve, reject) => {
             if (!this.insertUrl) {
@@ -674,7 +642,7 @@ export class Collection {
             let insertUrlString = this.insertUrl.toString ? this.insertUrl.toString() : this.insertUrl;
 
             this.storage
-                .create(this, insertUrlString, { contentType: "application/vnd.api+json" }, JSON.stringify(jsonApiDoc))
+                .create(this, insertUrlString, { contentType: payload.contentType }, payload.body)
                 .then((resp) => {
                     let data = resp.data;
                     // For batch insert, response should be a collection (array)
@@ -738,7 +706,8 @@ export class Collection {
             type: this.type,
             collection: this,
             uievents: this.uievents,
-            storage: this.storage
+            storage: this.storage,
+            adapter: this.adapter,
         };
         if(this.setAttrAsId && itemData.id==null) {
             log("set item id from attribute", this.setAttrAsId, itemData);

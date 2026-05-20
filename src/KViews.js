@@ -5,8 +5,9 @@ import { Item } from './Item.js';
 import { CollectionView } from './CollectionView.js';
 import { ItemView } from './ItemView.js';
 import { Filtering } from './Filtering.js';
-import { utilities } from './utilities.js';
+import { resolveAdapter, registerAdapter, setDefaultAdapter, getDefaultAdapter } from './adapters/index.js';
 import { Sorting } from './Sorting.js';
+import { utilities } from './utilities.js';
 
 /**
  * Main KViews class - factory for creating Item and Collection instances
@@ -68,7 +69,7 @@ export class KViews {
                 'template', 'type', 'pageSize', 'offset',
                 'emptyview', 'filter', 'paging', 'addontop',
                 'uievents', 'setAttrAsId', 'itemListeners', 'itemOn',
-                'headers'
+                'headers', 'adapter'
             ];
             
             // Update URL if provided
@@ -89,6 +90,10 @@ export class KViews {
             
             // Apply only safe updates
             Object.assign(existingInstance, safeUpdates);
+
+            if (safeUpdates.adapter) {
+                existingInstance.adapter = resolveAdapter(safeUpdates.adapter);
+            }
 
             if (safeUpdates.headers && existingInstance.storage && existingInstance.storage.defaultOptions) {
                 existingInstance.storage.defaultOptions.headers = Object.assign(
@@ -291,6 +296,27 @@ export class KViews {
         return instance;
     }
     static helpers = utilities;
+
+    /**
+     * Global default data adapter (name or instance). Defaults to 'jsonapi'.
+     */
+    static get defaultAdapter() {
+        return getDefaultAdapter();
+    }
+
+    static set defaultAdapter(adapter) {
+        setDefaultAdapter(adapter);
+    }
+
+    /**
+     * Register a custom data adapter by name.
+     *
+     * @param {string} name
+     * @param {object} adapter
+     */
+    static registerAdapter(name, adapter) {
+        registerAdapter(name, adapter);
+    }
 }
 
 Object.defineProperty(KViews, "baseUrl", {

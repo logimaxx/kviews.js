@@ -17,6 +17,8 @@
     "LICENSE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SUPPORT.md",
     "SECURITY.md"
   ],
   "repository": {
@@ -29,7 +31,7 @@
   "homepage": "https://github.com/logimaxx/kviews#readme",
   "scripts": {
     "build": "node build.js",
-    "release": "bash scripts/release.sh",
+    "release": "node scripts/release.mjs",
     "prepack": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",

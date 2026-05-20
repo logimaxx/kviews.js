@@ -2,6 +2,8 @@
 
 Thank you for helping improve KViews.
 
+This project follows the [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you agree to uphold it.
+
 ## Development setup
 
 ```bash
@@ -15,7 +17,7 @@ npm install
 1. **Tests** — all Vitest tests should pass:
 
    ```bash
-   npm test -- --run
+   npm test
    ```
 
 2. **Build** — the IIFE bundle should build without errors:
@@ -43,4 +45,6 @@ npm install
 
 ## Publishing (maintainers)
 
-`npm publish` runs `prepack`, which runs `npm run build`, so `dist/` is up to date in the published tarball. Ensure `package.json` version is bumped (for example with `npm version patch`) and `CHANGELOG.md` is updated before tagging a release.
+See **[RELEASE_FLOW.md](./RELEASE_FLOW.md)** for the full checklist (tests, build, version bump, `CHANGELOG.md`, `npm publish`, tags).
+
+Briefly: `npm publish` runs `prepack`, which runs `npm run build`, so `dist/` in the tarball matches the sources. Bump `package.json` (for example with `npm version patch`) only after `[Unreleased]` in `CHANGELOG.md` is ready for that version.

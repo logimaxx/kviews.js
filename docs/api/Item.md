@@ -16,6 +16,7 @@ new Item(options, data)
 
 **HTTP-related options** (when not using a parent collection’s `storage`):
 
+- `adapter` (String|Object) - Data adapter name or instance (default: `'jsonapi'`, or parent collection’s adapter). See [Adapters Guide](../guides/adapters.md).
 - `headers` (Object) - Default headers for this item’s `Storage`
 - `ajaxOpts` (Object) - Options passed to `new Storage(...)` (merged with `headers`)
 - `storage` (Storage) - Custom `Storage` instance
@@ -51,6 +52,9 @@ Array of ItemView instances bound to this item.
 
 #### `collection` (Collection)
 Parent collection (if part of a collection).
+
+#### `adapter` (Object)
+Data adapter used to parse remote responses and serialize updates (inherited from collection when applicable).
 
 #### `strict` (Boolean)
 Strict mode flag.
@@ -200,12 +204,37 @@ item.loadFromData({
 });
 ```
 
-#### `loadFromJSONAPIDoc(data)`
+#### `loadFromRemoteDoc(data)`
 
-Load item from JSON API document format.
+Load item from a remote API response body. The active **adapter** determines how the document is parsed (JSON:API, plain REST, or custom).
 
 **Parameters:**
-- `data` (Object) - JSON API document
+- `data` (Object) - Parsed HTTP response body
+
+**Returns:** Item instance
+
+**Example:**
+```javascript
+item.loadFromRemoteDoc({
+    data: {
+        id: '1',
+        type: 'posts',
+        attributes: { title: 'My Post' }
+    }
+});
+```
+
+With `adapter: 'plain'`:
+```javascript
+item.loadFromRemoteDoc({ id: 1, title: 'My Post' });
+```
+
+#### `loadFromJSONAPIDoc(data)` *(deprecated)*
+
+Deprecated alias for `loadFromRemoteDoc()`. Prefer `loadFromRemoteDoc()` for adapter-agnostic code.
+
+**Parameters:**
+- `data` (Object) - Remote API document
 
 **Returns:** Item instance
 
