@@ -24,7 +24,7 @@ If **`npm run release`** ([`scripts/release.mjs`](scripts/release.mjs)) or `git 
 
 ```bash
 npm version patch   # or minor / major
-npm publish
+npm publish         # scoped package: @logimaxx/kviews (publishConfig.access: public)
 git push && git push --tags
 ```
 
@@ -32,5 +32,5 @@ git push && git push --tags
 
 ## After publish
 
-- Confirm the new version on [npm](https://www.npmjs.com/package/kviews).
+- Confirm the new version on [npm](https://www.npmjs.com/package/@logimaxx/kviews).
 - If you use GitHub Releases, add release notes that mirror the relevant [CHANGELOG.md](CHANGELOG.md) section.

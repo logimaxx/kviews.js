@@ -20,7 +20,7 @@
         </p>
         <div class="actions">
           <a class="btn primary" href="https://github.com/logimaxx/kviews">GitHub repository</a>
-          <a class="btn" href="https://www.npmjs.com/package/kviews">npm package</a>
+          <a class="btn" href="https://www.npmjs.com/package/@logimaxx/kviews">npm package</a>
           <a class="btn" href="https://github.com/logimaxx/kviews/tree/main/docs">Documentation (in repo)</a>
           <a class="btn" href="#live-demo">Jump to live demo</a>
         </div>
@@ -78,7 +78,7 @@
       <section>
         <h2>Install</h2>
         <div class="card">
-          <pre><code>npm install kviews handlebars jquery</code></pre>
+          <pre><code>npm install @logimaxx/kviews handlebars jquery</code></pre>
         </div>
       </section>
 
@@ -89,7 +89,7 @@
             KViews expects <strong>jQuery</strong> and <strong>Handlebars</strong> as peer dependencies (globals in the
             browser, or configured in your bundler) before you call the API.
           </p>
-          <pre><code>import KViews from 'kviews';
+          <pre><code>import KViews from '@logimaxx/kviews';
 
 KViews.createCollectionInstance('#posts', {
   url: '/api/posts',

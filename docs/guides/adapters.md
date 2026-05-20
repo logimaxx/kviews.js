@@ -120,7 +120,7 @@ adapter: new PlainRestAdapter({
 When your API uses different property names or nesting:
 
 ```javascript
-import { PlainRestAdapter } from 'kviews';
+import { PlainRestAdapter } from '@logimaxx/kviews';
 
 KViews.createCollectionInstance('#reports', {
     url: '/api/reports',
@@ -144,7 +144,7 @@ KViews.createCollectionInstance('#reports', {
 Use when most of your app targets one wire format:
 
 ```javascript
-import KViews, { PlainRestAdapter } from 'kviews';
+import KViews, { PlainRestAdapter } from '@logimaxx/kviews';
 
 KViews.defaultAdapter = 'plain';
 // or
@@ -156,7 +156,7 @@ Per-instance `adapter` still overrides the global default.
 ## Register a custom adapter
 
 ```javascript
-import KViews from 'kviews';
+import KViews from '@logimaxx/kviews';
 
 KViews.registerAdapter('my-api', myAdapter);
 KViews.createCollectionInstance('#list', { adapter: 'my-api', ... });
@@ -315,7 +315,7 @@ import KViews, {
     registerAdapter,
     setDefaultAdapter,
     getDefaultAdapter,
-} from 'kviews';
+} from '@logimaxx/kviews';
 ```
 
 ## See also

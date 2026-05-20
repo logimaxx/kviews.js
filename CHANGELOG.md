@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- npm package name is **`@logimaxx/kviews`** (unscoped `kviews` is blocked by npm as too similar to `iview`). Install with `npm install @logimaxx/kviews`.
+
 ### Added
 
 - **Data adapters** — pluggable wire-format layer; default remains JSON:API (`adapter: 'jsonapi'`).
