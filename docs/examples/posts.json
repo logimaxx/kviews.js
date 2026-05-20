@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "totalRecords": 4,
+    "offset": 0
+  },
+  "data": [
+    {
+      "id": "1",
+      "type": "posts",
+      "attributes": {
+        "title": "Designing JSON:API responses",
+        "excerpt": "Shape list and detail payloads so KViews can hydrate relationships from included.",
+        "content": "KViews expects a JSON:API document with data, optional included, and meta for pagination. Relationships reference other resources by type and id; included carries the nested author rows used in templates as {{author.name}}.",
+        "status": "published"
+      },
+      "relationships": {
+        "author": {
+          "data": { "type": "users", "id": "10" }
+        }
+      }
+    },
+    {
+      "id": "2",
+      "type": "posts",
+      "attributes": {
+        "title": "Templates without a build step",
+        "excerpt": "Use {{title}} in the row template — attributes are flattened for Handlebars.",
+        "content": "Item.getRenderContext() exposes attributes at the top level and nests related resources, so list rows stay simple while still supporting {{author.name}} and {{#each tags}} patterns.",
+        "status": "published"
+      },
+      "relationships": {
+        "author": {
+          "data": { "type": "users", "id": "11" }
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "posts",
+      "attributes": {
+        "title": "Adapters: JSON:API and plain REST",
+        "excerpt": "Swap wire formats with adapter: 'jsonapi' or adapter: 'plain' without changing views.",
+        "content": "The adapter layer parses HTTP responses and serializes updates. This demo uses the default JSON:API adapter with static JSON files in docs/examples/.",
+        "status": "published"
+      },
+      "relationships": {
+        "author": {
+          "data": { "type": "users", "id": "10" }
+        }
+      }
+    },
+    {
+      "id": "4",
+      "type": "posts",
+      "attributes": {
+        "title": "Draft: pagination notes",
+        "excerpt": "Paging needs a live API — static JSON always returns the full list.",
+        "content": "For a local demo, reload the collection or append rows client-side. Hook up a real backend when you want page[offset] queries to return different slices.",
+        "status": "draft"
+      },
+      "relationships": {
+        "author": {
+          "data": { "type": "users", "id": "11" }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "users",
+      "id": "10",
+      "attributes": {
+        "name": "Alex Kim",
+        "role": "Editor"
+      }
+    },
+    {
+      "type": "users",
+      "id": "11",
+      "attributes": {
+        "name": "Jordan Lee",
+        "role": "Contributor"
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "data": {
+    "id": "1",
+    "type": "posts",
+    "attributes": {
+      "title": "Single-item payloads",
+      "excerpt": "One resource object in data — used by createItemInstance.",
+      "content": "Item views load a JSON:API document whose data property is a single object (not an array). Relationships in included are hydrated the same way as in collection responses.",
+      "status": "published"
+    },
+    "relationships": {
+      "author": {
+        "data": { "type": "users", "id": "10" }
+      }
+    }
+  },
+  "included": [
+    {
+      "type": "users",
+      "id": "10",
+      "attributes": {
+        "name": "Alex Kim",
+        "role": "Editor"
+      }
+    }
+  ]
+}

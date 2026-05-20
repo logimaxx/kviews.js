@@ -1,10 +1,12 @@
 {
-    "data": {
-        "type": "posts",
-        "id": "1",
-        "attributes": {
-            "title": "Post 1",
-            "content": "Content of post 1"
-        }
+  "data": {
+    "type": "posts",
+    "id": "1",
+    "attributes": {
+      "title": "Post 1",
+      "excerpt": "Minimal item example",
+      "content": "Content of post 1",
+      "status": "published"
     }
+  }
 }

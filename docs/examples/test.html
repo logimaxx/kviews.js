@@ -1,109 +1,182 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>KViews Demo</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" >
-    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KViews — Posts demo</title>
+    <link rel="stylesheet" href="./demo.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>KViews Demo</h1>
-        <form id="form">
-            <input type="text" name="label" placeholder="Label">
-            <input type="text" name="cui" placeholder="CUI">
-            <button type="submit">Add</button>
-            <input type="hidden" name="id" value="">
-            <input type="reset" value="Reset">
-        </form>
-    
-        <!-- Collection Example -->
-        <div id="collection" class="row" data-pagesizeinp="#pageSize" data-paging="#paging">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h2>{{label}}</h2>
-                        <p>{{cui}}</p>
-                        <button class="btn btn-danger" onclick="$(this).parents('[data-type=item]').data('instance').delete()">Delete</button>
-                        <button class="btn btn-primary edit">Edit</button>
+    <div class="page">
+        <header class="hero">
+            <h1>Posts board</h1>
+            <p>
+                Local JSON:API demo — collection from <code>posts.json</code>, detail from
+                <code>post-1.json</code> or any row you select. Add rows client-side; no backend required.
+            </p>
+        </header>
+
+        <div class="layout">
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Collection</h2>
+                    <button type="button" class="btn" id="reload-posts">Reload JSON</button>
+                </div>
+                <div class="panel-body">
+                    <form id="compose-form" class="compose">
+                        <label>
+                            Title
+                            <input type="text" name="title" required placeholder="Post title" />
+                        </label>
+                        <label>
+                            Excerpt
+                            <input type="text" name="excerpt" placeholder="Short summary" />
+                        </label>
+                        <label>
+                            Status
+                            <select name="status">
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                            </select>
+                        </label>
+                        <button type="submit" class="btn btn-primary">Add post</button>
+                    </form>
+
+                    <div id="posts-list">
+                        <article class="post-card">
+                            <span class="badge badge-{{status}}">{{status}}</span>
+                            <h3>{{title}}</h3>
+                            <p class="excerpt">{{excerpt}}</p>
+                            <p class="meta">{{author.name}}{{#if author.role}} · {{author.role}}{{/if}}</p>
+                            <div class="card-actions">
+                                <button type="button" class="btn btn-view">View</button>
+                                <button type="button" class="btn btn-danger btn-remove">Remove</button>
+                            </div>
+                        </article>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <div id="paging">
-                    <button name="first" class="btn btn-sm btn-outline-secondary" title="0">&lt;&lt;</button>
-                    <button name="prev" class="btn btn-sm btn-outline-secondary" title="-20">&lt;</button>
-                    <button name="page" class="btn btn-sm btn-outline-secondary" title="0">1</button>
-                    <button name="next" class="btn btn-sm btn-outline-secondary" title="20">&gt;</button>
-                    <button name="last" class="btn btn-sm btn-outline-secondary" title="140">&gt;&gt;</button>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Detail</h2>
+                    <span class="hint" style="margin:0">Item instance</span>
                 </div>
-            </div>
-            <div class="col">
-                <select id="pageSize">
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="item">
-            <h2>{{label}}</h2>
-            <p>{{cui}}</p>
-        </div>
-
-        <div id="new-item">
-            <h2>{{label}}</h2>
-            <p>{{cui}}</p>
+                <div class="panel-body">
+                    <p class="detail-empty" id="detail-placeholder">
+                        Select a post or load the default from <code>post-1.json</code>.
+                    </p>
+                    <div id="post-detail">
+                        <article class="post-detail-inner">
+                            <span class="badge badge-{{status}}">{{status}}</span>
+                            <h2>{{title}}</h2>
+                            <p class="meta">{{author.name}}{{#if author.role}} · {{author.role}}{{/if}}</p>
+                            <p class="content">{{content}}</p>
+                        </article>
+                    </div>
+                    <p class="hint">
+                        Templates use flattened fields: <code>{{title}}</code>, <code>{{author.name}}</code>.
+                    </p>
+                </div>
+            </section>
         </div>
     </div>
-    <!-- jQuery first, then Handlebars (required by KViews) -->
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
-
-    <!-- Option 1: Using ES6 Modules (Modern Browsers) -->
     <script type="module">
         import { KViews } from '../../src/index.js';
-        const baseUrl = 'https://dbapi01.softaccel.net/apis/maxxopsdevel/data/';
-        window.kviewsLogLevel = 3;
-        $(document).ready(() => {
-            const collectionInstance = KViews.createCollectionInstance($('#collection'), {
-                url: baseUrl + '/companies',
-                type: 'companies',
-                pageSize: 5,
-                dontload: true,
-                paging: '#paging',
-                pagesizeinp: '#pageSize',
-                uievents: [
-                    {
-                        selector: '.edit',
-                        event: 'click',
-                        callback: (event, item, view) => {
-                            console.log("edit",event, item, view);
-                        }
-                    }
-                ]
+
+        const $placeholder = $('#detail-placeholder');
+
+        function showDetailFromItem(item) {
+            $placeholder.hide();
+            detailItem.loadFromData({
+                id: item.id,
+                type: item.type,
+                attributes: { ...item.attributes },
+                relationships: item.relationships,
+            }).render();
+            $('#posts-list [data-type=item]').removeClass('is-selected');
+            item.views.forEach((view) => {
+                if (view.el) {
+                    $(view.el).addClass('is-selected');
+                }
             });
-            collectionInstance.loadFromRemote();
+        }
 
-            const itemInstance = KViews.createItemInstance($('#item'),baseUrl + '/companies/1');
-            
-            const newItemInstance = KViews.createItemInstance($('#new-item'))
-                .loadFromData({ label: 'New Company', cui: '1234567890' }, true);
-            
+        const posts = KViews.createCollectionInstance('#posts-list', {
+            url: './posts.json',
+            type: 'posts',
+            dontload: true,
+            uievents: [
+                {
+                    selector: '.btn-view',
+                    event: 'click',
+                    callback: (event, item) => {
+                        event.preventDefault();
+                        showDetailFromItem(item);
+                    },
+                },
+                {
+                    selector: '.btn-remove',
+                    event: 'click',
+                    callback: (event, item) => {
+                        event.preventDefault();
+                        item.remove();
+                    },
+                },
+            ],
+        });
 
+        posts.loadFromRemote();
 
-            document.getElementById('form').addEventListener('submit', function(event) {
-                event.preventDefault();
-                const data = new FormData(event.target);
-                const id = data.get('id');
-                const label = data.get('label');
-                const cui = data.get('cui');
-                collectionInstance.append({ label: label, cui: cui});
+        const detailItem = KViews.createItemInstance('#post-detail', {
+            url: './post-1.json',
+            type: 'posts',
+            dontload: true,
+        });
+
+        detailItem.on('load', () => {
+            $placeholder.hide();
+        });
+
+        detailItem.loadFromRemote();
+
+        $('#reload-posts').on('click', () => {
+            posts.loadFromRemote();
+        });
+
+        $('#compose-form').on('submit', function (event) {
+            event.preventDefault();
+            const data = new FormData(event.target);
+            const title = String(data.get('title') || '').trim();
+            if (!title) {
+                return;
+            }
+
+            const newItem = posts.loadItem({
+                id: String(Date.now()),
+                type: 'posts',
+                attributes: {
+                    title,
+                    excerpt: String(data.get('excerpt') || ''),
+                    content: String(data.get('excerpt') || title),
+                    status: String(data.get('status') || 'draft'),
+                },
+                relationships: {
+                    author: {
+                        id: '10',
+                        type: 'users',
+                        attributes: { name: 'Alex Kim', role: 'Editor' },
+                        relationships: {},
+                    },
+                },
             });
+
+            newItem.render(posts.view, posts.addontop);
+            showDetailFromItem(newItem);
+            event.target.reset();
         });
     </script>
 </body>

@@ -1,23 +1,28 @@
 {
-    "data": [
-        {
-            "type": "posts",
-            "id": "1",
-            "attributes": {
-                "title": "Post 1",
-                "content": "Content of post 1"
-            }
-        },
-        {
-            "type": "posts",
-            "id": "2",
-            "attributes": {
-                "title": "Post 2",
-                "content": "Content of post 2"
-            }
-        }
-    ],
-    "meta": {
-        "total": 2
+  "data": [
+    {
+      "type": "posts",
+      "id": "1",
+      "attributes": {
+        "title": "Post 1",
+        "excerpt": "Minimal collection example",
+        "content": "Content of post 1",
+        "status": "published"
+      }
+    },
+    {
+      "type": "posts",
+      "id": "2",
+      "attributes": {
+        "title": "Post 2",
+        "excerpt": "Second row",
+        "content": "Content of post 2",
+        "status": "draft"
+      }
     }
+  ],
+  "meta": {
+    "totalRecords": 2,
+    "offset": 0
+  }
 }
