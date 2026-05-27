@@ -481,37 +481,67 @@ export class Item {
      */
     getRenderContext() {
         
-        function copyntransform(obj,wd=0) {
-            if(wd>5) {
+        function deepCloneStatic(value, seen = new WeakMap()) {
+            if (value === null || typeof value !== 'object') {
+                return value;
+            }
+
+            if (seen.has(value)) {
+                return seen.get(value);
+            }
+
+            if (Array.isArray(value)) {
+                const clonedArray = [];
+                seen.set(value, clonedArray);
+                value.forEach((item) => clonedArray.push(deepCloneStatic(item, seen)));
+                return clonedArray;
+            }
+
+            const clonedObject = {};
+            seen.set(value, clonedObject);
+            Object.keys(value).forEach((key) => {
+                clonedObject[key] = deepCloneStatic(value[key], seen);
+            });
+            return clonedObject;
+        }
+
+        function copyntransform(obj, seenItems = new WeakSet()) {
+            if (!obj) {
                 return null;
             }
-            // console.log("debugggg",obj);
-            if(!obj) {
-                return null;
+
+            if (typeof obj !== 'object') {
+                return obj;
             }
-            if (!obj?.attributes) {
-                // return obj.type != null ? { id: obj.id, type: obj.type } : { id: obj.id };
-                return { id: obj.id };
-            }
-            const result = Object.assign(
-                // { id: obj.id, ...(obj.type != null ? { type: obj.type } : {}) },
-                { id: obj.id},
-                obj?.attributes ?? {}
-            );
-            Object.keys(obj?.relationships??{}).forEach(relName => {
-                // console.log("debugggg Enter relation",relName,obj.relationships[relName]);
-                if(Array.isArray(obj.relationships[relName])) {
-                    // console.log("debugggg Enter relation array",relName,obj.relationships[relName]);
-                    result[relName] = obj.relationships[relName].map(item => copyntransform(item,wd+1))
+
+            if (!obj.attributes) {
+                if (obj.id != null) {
+                    return { id: obj.id };
                 }
-                else {
-                    // console.log("debugggg Enter relation object",relName,obj.relationships[relName]);
-                    result[relName]=copyntransform(obj.relationships[relName],wd);
+                return deepCloneStatic(obj);
+            }
+
+            if (seenItems.has(obj)) {
+                return obj.id != null ? { id: obj.id } : null;
+            }
+            seenItems.add(obj);
+
+            const result = Object.assign(
+                { id: obj.id },
+                deepCloneStatic(obj.attributes ?? {})
+            );
+
+            Object.keys(obj.relationships ?? {}).forEach((relName) => {
+                if (Array.isArray(obj.relationships[relName])) {
+                    result[relName] = obj.relationships[relName].map((item) => copyntransform(item, seenItems));
+                } else {
+                    result[relName] = copyntransform(obj.relationships[relName], seenItems);
                 }
             });
             return result;
         }
-        const tmp = copyntransform(this, 0);
+        console.log("copyntransform", this);
+        const tmp = copyntransform(this);
         return tmp;
     }
 

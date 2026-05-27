@@ -54,6 +54,27 @@ describe('Refactoring Tests', () => {
             // Original relationship should be unchanged
             expect(item.relationships.tags[0].attributes.name).toBe('Tag1');
         });
+
+        it('should deep clone nested attribute objects in render context', () => {
+            const item = new Item({ type: 'posts' });
+            item.id = '1';
+            item.attributes = {
+                title: 'Post',
+                metadata: {
+                    seo: {
+                        title: 'Original SEO'
+                    },
+                    flags: ['featured']
+                }
+            };
+
+            const renderContext = item.getRenderContext();
+            renderContext.metadata.seo.title = 'Changed SEO';
+            renderContext.metadata.flags.push('archived');
+
+            expect(item.attributes.metadata.seo.title).toBe('Original SEO');
+            expect(item.attributes.metadata.flags).toEqual(['featured']);
+        });
     });
 
     describe('Parser - No Global State', () => {
