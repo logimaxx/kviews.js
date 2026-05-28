@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
- * Version: 1.2.1
- * Built: 2026-05-27T13:02:31.610Z
+ * Version: 1.2.2
+ * Built: 2026-05-28T14:42:52.014Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -2103,39 +2103,62 @@ var KViews = (() => {
         });
         return clonedObject;
       }
-      function copyntransform(obj, seenItems = /* @__PURE__ */ new WeakSet()) {
+      function isResourceNode(obj) {
+        return obj instanceof _Item || obj.attributes != null && typeof obj.attributes === "object";
+      }
+      function isReferenceStub(obj) {
+        if (!obj || typeof obj !== "object" || Array.isArray(obj) || isResourceNode(obj)) {
+          return false;
+        }
+        if (obj.id == null) {
+          return false;
+        }
+        return Object.keys(obj).every((key) => key === "id" || key === "type");
+      }
+      function copyntransform(obj, cache = /* @__PURE__ */ new WeakMap()) {
         if (!obj) {
           return null;
         }
         if (typeof obj !== "object") {
           return obj;
         }
-        if (!obj.attributes) {
+        if (cache.has(obj)) {
+          return cache.get(obj);
+        }
+        if (isReferenceStub(obj)) {
+          const stub = { id: obj.id };
+          cache.set(obj, stub);
+          return stub;
+        }
+        if (!isResourceNode(obj)) {
           if (obj.id != null) {
-            return { id: obj.id };
+            const flat = { id: obj.id };
+            Object.keys(obj).forEach((key) => {
+              if (key === "id" || key === "type" || key === "relationships" || key === "attributes") {
+                return;
+              }
+              flat[key] = deepCloneStatic(obj[key]);
+            });
+            cache.set(obj, flat);
+            return flat;
           }
-          return deepCloneStatic(obj);
+          const cloned = deepCloneStatic(obj);
+          cache.set(obj, cloned);
+          return cloned;
         }
-        if (seenItems.has(obj)) {
-          return obj.id != null ? { id: obj.id } : null;
-        }
-        seenItems.add(obj);
-        const result = Object.assign(
-          { id: obj.id },
-          deepCloneStatic(obj.attributes ?? {})
-        );
+        const result = { id: obj.id };
+        cache.set(obj, result);
+        Object.assign(result, deepCloneStatic(obj.attributes ?? {}));
         Object.keys(obj.relationships ?? {}).forEach((relName) => {
           if (Array.isArray(obj.relationships[relName])) {
-            result[relName] = obj.relationships[relName].map((item) => copyntransform(item, seenItems));
+            result[relName] = obj.relationships[relName].map((item) => copyntransform(item, cache));
           } else {
-            result[relName] = copyntransform(obj.relationships[relName], seenItems);
+            result[relName] = copyntransform(obj.relationships[relName], cache);
           }
         });
         return result;
       }
-      console.log("copyntransform", this);
-      const tmp = copyntransform(this);
-      return tmp;
+      return copyntransform(this);
     }
     /**
      * Convert to JSON:API format

@@ -158,6 +158,52 @@ describe('Refactoring Pass 2', () => {
             expect(item.attributes.title).toBe('Original');
             expect(item.relationships.author.attributes.name).toBe('Original Author');
         });
+
+        it('should flatten the same related resource referenced more than once', () => {
+            const company = {
+                id: '10',
+                type: 'companies',
+                attributes: { name: 'Acme Corp' },
+                relationships: {}
+            };
+
+            const item = new Item({
+                type: 'products',
+                attributes: { name: 'Widget' },
+                relationships: {
+                    company_id: company,
+                    company: company
+                }
+            });
+
+            const context = item.getRenderContext();
+
+            expect(context.company_id).toEqual({ id: '10', name: 'Acme Corp' });
+            expect(context.company).toEqual({ id: '10', name: 'Acme Corp' });
+        });
+
+        it('should flatten company_id when relationship is an Item instance', () => {
+            const item = new Item({
+                type: 'products',
+                attributes: { name: 'Widget' },
+                relationships: {
+                    company_id: new Item({
+                        type: 'companies',
+                        attributes: { name: 'Acme Corp' }
+                    }).loadFromData({
+                        id: '10',
+                        type: 'companies',
+                        attributes: { name: 'Acme Corp' }
+                    })
+                }
+            });
+            item.id = '1';
+
+            expect(item.getRenderContext().company_id).toEqual({
+                id: '10',
+                name: 'Acme Corp'
+            });
+        });
     });
 
     describe('getOrUpdateInstance() safe updates', () => {
