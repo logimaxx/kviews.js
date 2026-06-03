@@ -52,14 +52,14 @@ Download `dist/kviews.js` and include it in your HTML:
 
 ### Method 2: ES modules from npm
 
-The published **`@logimaxx/kviews`** package exposes **`dist/index.js`** as its ES module entry. Install peers and resolve `@logimaxx/kviews` through your bundler (Vite, webpack, Rollup, and similar).
+The published **`@logimaxx/kviews.js`** package exposes **`dist/index.js`** as its ES module entry. Install peers and resolve `@logimaxx/kviews.js` through your bundler (Vite, webpack, Rollup, and similar).
 
 ```bash
-npm install @logimaxx/kviews handlebars jquery
+npm install @logimaxx/kviews.js handlebars jquery
 ```
 
 ```javascript
-import KViews from '@logimaxx/kviews';
+import KViews from '@logimaxx/kviews.js';
 // named exports: Collection, Item, Storage, ...
 ```
 
@@ -71,7 +71,7 @@ Typical HTML (peers global; app code bundled or as a separate module):
 <script type="module" src="./main.js"></script>
 ```
 
-Inside `main.js`, `import KViews from '@logimaxx/kviews'` is resolved by your bundler.
+Inside `main.js`, `import KViews from '@logimaxx/kviews.js'` is resolved by your bundler.
 
 **Fork or vendor `src/` (advanced):** only when you develop KViews itself—clone the repo and import from `./src/index.js`. The npm tarball does **not** ship `src/`.
 
@@ -168,7 +168,7 @@ npx esbuild src/index.js --bundle --format=iife --global-name=KViews --outfile=d
 ## Browser support
 
 - **Bundled workflow** (`dist/kviews.js`): targets modern JavaScript (same as `build.js`; no guarantees for legacy IE without forking).
-- **ES modules** (`dist/index.js`, via `"@logimaxx/kviews"` in a bundler): evergreen browsers aligned with baseline ES modules (for example Chrome 61+, Firefox 60+, Safari 11+, Edge 16+).
+- **ES modules** (`dist/index.js`, via `"@logimaxx/kviews.js"` in a bundler): evergreen browsers aligned with baseline ES modules (for example Chrome 61+, Firefox 60+, Safari 11+, Edge 16+).
 
 ## CDN usage (bundle)
 
@@ -177,10 +177,10 @@ With jQuery and Handlebars loaded first, you can point a `<script>` tag at npm C
 ```html
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@logimaxx/kviews@latest/dist/kviews.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@logimaxx/kviews.js@latest/dist/kviews.js"></script>
 ```
 
-For **bare `import '@logimaxx/kviews'`** in browser modules, configure your bundler or use [import maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap); unpinned CDN `import` of `dist/index.js` is possible but you must pin a version URL and handle peer globals yourself.
+For **bare `import '@logimaxx/kviews.js'`** in browser modules, configure your bundler or use [import maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap); unpinned CDN `import` of `dist/index.js` is possible but you must pin a version URL and handle peer globals yourself.
 
 ## Verifying Installation
 
@@ -195,7 +195,7 @@ if (typeof KViews !== 'undefined') {
 }
 
 // ES modules version (consumers typically use package name resolved by bundler)
-import KViews from '@logimaxx/kviews';
+import KViews from '@logimaxx/kviews.js';
 log('KViews loaded:', KViews);
 ```
 

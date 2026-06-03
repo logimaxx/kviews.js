@@ -1,5 +1,5 @@
 {
-  "name": "@logimaxx/kviews",
+  "name": "@logimaxx/kviews.js",
   "version": "1.2.2",
   "description": "Class-based JSON:API data binding for the DOM (jQuery, Handlebars, Fetch; collections and items)",
   "type": "module",

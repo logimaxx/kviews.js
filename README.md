@@ -1,6 +1,6 @@
 # KViews
 
-[![npm version](https://img.shields.io/npm/v/@logimaxx/kviews.svg)](https://www.npmjs.com/package/@logimaxx/kviews)
+[![npm version](https://img.shields.io/npm/v/@logimaxx/kviews.js.svg)](https://www.npmjs.com/package/@logimaxx/kviews.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A modern, class-based JavaScript library for binding API data to DOM elements. KViews provides a clean, declarative way to work with REST APIs (JSON:API by default, plain REST via adapters) and render data using Handlebars templates. **Runtime requirements:** [jQuery](https://jquery.com/) (DOM and selectors) and [Handlebars](https://handlebarsjs.com/) (templates); both are `peerDependencies` when you install from npm.
@@ -23,14 +23,14 @@ A modern, class-based JavaScript library for binding API data to DOM elements. K
 ### npm
 
 ```bash
-npm install @logimaxx/kviews
+npm install @logimaxx/kviews.js
 ```
 
 ES module import (browser app with your bundler):
 
 ```javascript
-import KViews from '@logimaxx/kviews';
-// or: import { KViews, Collection, Item, Storage } from '@logimaxx/kviews';
+import KViews from '@logimaxx/kviews.js';
+// or: import { KViews, Collection, Item, Storage } from '@logimaxx/kviews.js';
 ```
 
 Peer dependencies: **Handlebars** and **jQuery** must be installed in your app (`npm install handlebars jquery`).
@@ -50,7 +50,7 @@ Download `dist/kviews.js` and include it in your HTML:
 ### Using ES6 modules
 
 ```bash
-npm install @logimaxx/kviews
+npm install @logimaxx/kviews.js
 ```
 
 Use `import` from the `kviews` package (see **Quick Start** below). To hack on the library itself, clone this repo and import from `src/index.js`.
@@ -111,8 +111,8 @@ Load **jQuery** before **Handlebars**, then KViews (bundle or your module entry)
     </div>
 
     <script type="module">
-        // With a bundler (Vite, webpack, etc.) after `npm install @logimaxx/kviews`:
-        import KViews from '@logimaxx/kviews';
+        // With a bundler (Vite, webpack, etc.) after `npm install @logimaxx/kviews.js`:
+        import KViews from '@logimaxx/kviews.js';
 
         KViews.createCollectionInstance('#posts', {
             url: '/api/posts',
@@ -347,7 +347,7 @@ kviews.js/
 
 ## Browser support
 
-- **ES modules** (`import … from '@logimaxx/kviews'` via a bundler): evergreen browsers aligned with baseline ES modules (approx. Chrome 61+, Firefox 60+, Safari 11+, Edge 16+).
+- **ES modules** (`import … from '@logimaxx/kviews.js'` via a bundler): evergreen browsers aligned with baseline ES modules (approx. Chrome 61+, Firefox 60+, Safari 11+, Edge 16+).
 
 - **IIFE bundle** (`dist/kviews.js`): same modern JavaScript assumptions as the build (see `build.js`). Very old browsers (for example IE 11) are **not** a supported target unless you fork and downgrade the toolchain; use an evergreen browser or upgrade client environments.
 

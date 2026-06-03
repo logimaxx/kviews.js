@@ -4,7 +4,7 @@ Welcome to the KViews documentation! KViews is a class-based JavaScript library 
 
 An extended, machine-oriented reference also lives in **[KVIEWS_AI_DOCUMENTATION.md](./KVIEWS_AI_DOCUMENTATION.md)** for tooling and deep dives; everyday use starts with the guides and API pages below.
 
-**Import paths in examples:** Snippets embedded in guides and API pages often use `import … from './src/index.js'` as if you are developing **inside this repository**. When you consume the **`@logimaxx/kviews`** package from npm, use `import … from '@logimaxx/kviews'` instead (typically resolved via your bundler to `dist/index.js`).
+**Import paths in examples:** Snippets embedded in guides and API pages often use `import … from './src/index.js'` as if you are developing **inside this repository**. When you consume the **`@logimaxx/kviews.js`** package from npm, use `import … from '@logimaxx/kviews.js'` instead (typically resolved via your bundler to `dist/index.js`).
 
 ## Documentation Structure
 
@@ -33,7 +33,7 @@ An extended, machine-oriented reference also lives in **[KVIEWS_AI_DOCUMENTATION
 
 ### Using ES modules (`npm`)
 
-After `npm install @logimaxx/kviews handlebars jquery`:
+After `npm install @logimaxx/kviews.js handlebars jquery`:
 
 ```html
 <!DOCTYPE html>
@@ -51,8 +51,8 @@ After `npm install @logimaxx/kviews handlebars jquery`:
     </div>
 
     <script type="module">
-        import KViews from '@logimaxx/kviews';
-        /* or: import { KViews } from '@logimaxx/kviews'; */
+        import KViews from '@logimaxx/kviews.js';
+        /* or: import { KViews } from '@logimaxx/kviews.js'; */
 
         KViews.createCollectionInstance(document.getElementById('collection'), {
             url: '/api/posts',
@@ -63,7 +63,7 @@ After `npm install @logimaxx/kviews handlebars jquery`:
 </html>
 ```
 
-Use a bundler so the `@logimaxx/kviews` import resolves (`dist/index.js` is the package entry).
+Use a bundler so the `@logimaxx/kviews.js` import resolves (`dist/index.js` is the package entry).
 
 ### Developing KViews locally (this repository)
 
@@ -129,14 +129,14 @@ Clone the repo and import from `./src/index.js` (see [Getting Started](./guides/
 ### ES6 Modules (npm + bundler)
 
 ```bash
-npm install @logimaxx/kviews handlebars jquery
+npm install @logimaxx/kviews.js handlebars jquery
 ```
 
 ```html
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
-    import KViews from '@logimaxx/kviews';
+    import KViews from '@logimaxx/kviews.js';
     KViews.createCollectionInstance('#collection', {
         url: '/api/posts',
         type: 'posts'
@@ -144,7 +144,7 @@ npm install @logimaxx/kviews handlebars jquery
 </script>
 ```
 
-Your bundler must resolve `@logimaxx/kviews` to `node_modules/@logimaxx/kviews/dist/index.js`.
+Your bundler must resolve `@logimaxx/kviews.js` to `node_modules/@logimaxx/kviews.js/dist/index.js`.
 
 ## Requirements
 

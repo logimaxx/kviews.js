@@ -23,19 +23,19 @@ KViews will be available globally as `window.KViews`.
 If you use Vite, webpack, or another bundler:
 
 ```bash
-npm install @logimaxx/kviews handlebars jquery
+npm install @logimaxx/kviews.js handlebars jquery
 ```
 
 ```html
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
 <script type="module">
-    import KViews from '@logimaxx/kviews';
+    import KViews from '@logimaxx/kviews.js';
     /* application code */
 </script>
 ```
 
-To work on **this** repository, clone it and import from `./src/index.js` instead of the `@logimaxx/kviews` package name.
+To work on **this** repository, clone it and import from `./src/index.js` instead of the `@logimaxx/kviews.js` package name.
 
 ## Requirements
 
