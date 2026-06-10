@@ -254,4 +254,18 @@ describe('Item.perform_update() Relationship Serialization', () => {
             });
         });
     });
+
+    describe('Error handling', () => {
+        it('rejects with the original storage error when PATCH fails', async () => {
+            const item = new Item({ type: 'orders', id: '1', attributes: { x: 1 } });
+            item.shadow = { attributes: { x: 0 }, relationships: {} };
+            item.attributes.x = 1;
+            const httpError = new Error('HTTP 422');
+            httpError.jqXHR = { status: 422 };
+            item.storage = { update: vi.fn().mockRejectedValue(httpError) };
+            item.updateUrl = { toString: () => '/api/orders/1' };
+
+            await expect(item.perform_update()).rejects.toBe(httpError);
+        });
+    });
 });

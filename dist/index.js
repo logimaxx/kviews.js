@@ -2263,7 +2263,7 @@ var Item = class _Item {
         }
         resolve(this);
       }).catch((error2) => {
-        dbg("Update NOK", this.updateUrl, patchData, error2);
+        dbg("Update NOK", this.updateUrl, payload.body, error2);
         if (error2 instanceof Error && error2.jqXHR) {
           reject(error2);
         } else if (error2.jqXHR) {

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Item.perform_update()`** — failed PATCH requests now reject with the original storage/HTTP error instead of masking it with `ReferenceError: patchData is not defined`.
+
 ### Changed
 
 - npm package name is **`@logimaxx/kviews.js`** (renamed from `@logimaxx/kviews`). Install with `npm install @logimaxx/kviews.js`.

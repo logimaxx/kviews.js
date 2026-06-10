@@ -780,7 +780,7 @@ export class Item {
                         resolve(this);
                     })
                     .catch((error) => {
-                        dbg("Update NOK", this.updateUrl, patchData, error);
+                        dbg("Update NOK", this.updateUrl, payload.body, error);
                         // Handle both old error format and new Error instances
                         if (error instanceof Error && error.jqXHR) {
                             reject(error);

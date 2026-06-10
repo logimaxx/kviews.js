@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
- * Version: 1.2.2
- * Built: 2026-06-03T07:38:24.891Z
+ * Version: 1.2.3
+ * Built: 2026-06-10T14:40:43.587Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -2321,7 +2321,7 @@ var KViews = (() => {
           }
           resolve(this);
         }).catch((error2) => {
-          dbg("Update NOK", this.updateUrl, patchData, error2);
+          dbg("Update NOK", this.updateUrl, payload.body, error2);
           if (error2 instanceof Error && error2.jqXHR) {
             reject(error2);
           } else if (error2.jqXHR) {
