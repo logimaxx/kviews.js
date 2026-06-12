@@ -7,13 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
-- **`Item.perform_update()`** — failed PATCH requests now reject with the original storage/HTTP error instead of masking it with `ReferenceError: patchData is not defined`.
+- **`showLoader`** option on `Item` and `Collection` — set to `false` to skip the loading overlay during `loadFromRemote()` (default: `true`).
 
 ### Changed
 
+- **`Item.loadFromRemote()`** — on an already loaded item, views re-render only when fetched data differs from the current state; the `load` event still fires when the request completes.
+- **`Item.loadFromRemoteDoc()`** — skips updating internal fields when parsed data equals the current item state.
 - npm package name is **`@logimaxx/kviews.js`** (renamed from `@logimaxx/kviews`). Install with `npm install @logimaxx/kviews.js`.
+
+### Fixed
+
+- **`Item.perform_update()`** — failed PATCH requests now reject with the original storage/HTTP error instead of masking it with `ReferenceError: patchData is not defined`.
 
 ## [1.2.1]
 

@@ -30,7 +30,7 @@ describe('Plain REST collection integration', () => {
 
         collection.view = {
             reset: vi.fn(),
-            render: vi.fn(),
+            _render: vi.fn(),
         };
 
         await collection.loadFromRemote();
@@ -56,7 +56,7 @@ describe('Plain REST collection integration', () => {
         collection.insertUrl = { toString: () => '/api/posts' };
         collection.view = {
             reset: vi.fn(),
-            render: vi.fn(),
+            _render: vi.fn(),
         };
 
         collection.loadItem = vi.fn((data) => {

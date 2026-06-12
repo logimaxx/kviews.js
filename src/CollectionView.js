@@ -35,8 +35,9 @@ export class CollectionView {
 
     /**
      * Render the collection view
+     * @private
      */
-    render() {
+    _render() {
         dbg("Render _collectionView", this.collection);
 
         if (this.collection && this.collection.navtype === "page") {

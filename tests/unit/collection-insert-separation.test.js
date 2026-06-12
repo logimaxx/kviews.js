@@ -30,7 +30,7 @@ describe('Collection insert() vs batchInsert() Separation', () => {
             collection.insertUrl = { toString: () => '/api/posts' };
             collection.view = {
                 reset: vi.fn(),
-                render: vi.fn()
+                _render: vi.fn()
             };
 
             collection.loadItem = vi.fn((data) => {
@@ -79,7 +79,7 @@ describe('Collection insert() vs batchInsert() Separation', () => {
             collection.insertUrl = { toString: () => '/api/posts' };
             collection.view = {
                 reset: vi.fn(),
-                render: vi.fn()
+                _render: vi.fn()
             };
 
             const loadedItems = [];
@@ -144,7 +144,7 @@ describe('Collection insert() vs batchInsert() Separation', () => {
             collection.insertUrl = { toString: () => '/api/posts' };
             collection.view = {
                 reset: vi.fn(),
-                render: vi.fn()
+                _render: vi.fn()
             };
 
             collection.loadItem = vi.fn((data) => {
@@ -181,7 +181,7 @@ describe('Collection insert() vs batchInsert() Separation', () => {
             collection.insertUrl = { toString: () => '/api/posts' };
             collection.view = {
                 reset: vi.fn(),
-                render: vi.fn()
+                _render: vi.fn()
             };
 
             const loadedItems = [];

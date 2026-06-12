@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
  * Version: 1.2.4
- * Built: 2026-06-12T19:32:55.611Z
+ * Built: 2026-06-12T19:38:39.734Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -2682,8 +2682,9 @@ var KViews = (() => {
     }
     /**
      * Render the collection view
+     * @private
      */
-    render() {
+    _render() {
       dbg("Render _collectionView", this.collection);
       if (this.collection && this.collection.navtype === "page") {
         this.reset();
@@ -3300,7 +3301,7 @@ var KViews = (() => {
         this.loadItem(item);
       });
       if (this.view) {
-        this.view.render();
+        this.view._render();
       } else {
         dbg("collection does not have a view ", this);
       }
@@ -3332,7 +3333,7 @@ var KViews = (() => {
     clear() {
       this.items = [];
       if (this.view) {
-        this.view.render();
+        this.view._render();
       }
       this._trigger("update", this);
       return this;
@@ -3342,7 +3343,7 @@ var KViews = (() => {
      */
     render() {
       if (this.view) {
-        this.view.render();
+        this.view._render();
       }
       this._trigger("afterrender", this);
       return this;

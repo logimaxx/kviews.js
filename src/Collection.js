@@ -408,7 +408,7 @@ export class Collection {
         });
 
         if (this.view) {
-            this.view.render();
+            this.view._render();
         } else {
             dbg("collection does not have a view ", this);
         }
@@ -448,7 +448,7 @@ export class Collection {
         
         // Render empty state
         if (this.view) {
-            this.view.render();
+            this.view._render();
         }
         
         this._trigger('update', this);
@@ -460,7 +460,7 @@ export class Collection {
      */
     render() {
         if (this.view) {
-            this.view.render();
+            this.view._render();
         }
 
         this._trigger('afterrender', this);

@@ -37,7 +37,7 @@ describe('Collection.append() Fix', () => {
         collection.insertUrl = { toString: () => '/api/posts' };
         collection.view = {
             reset: vi.fn(),
-            render: vi.fn()
+            _render: vi.fn()
         };
 
         // Mock loadItem to simulate adding item
@@ -80,7 +80,7 @@ describe('Collection.append() Fix', () => {
         collection.insertUrl = { toString: () => '/api/posts' };
         collection.view = {
             reset: vi.fn(),
-            render: vi.fn()
+            _render: vi.fn()
         };
 
         collection.loadItem = vi.fn((data) => {
@@ -113,7 +113,7 @@ describe('Collection.append() Fix', () => {
 
         collection.view = {
             reset: vi.fn(),
-            render: vi.fn()
+            _render: vi.fn()
         };
 
         collection.loadItem = vi.fn((data) => {

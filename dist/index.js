@@ -2623,8 +2623,9 @@ var CollectionView = class {
   }
   /**
    * Render the collection view
+   * @private
    */
-  render() {
+  _render() {
     dbg("Render _collectionView", this.collection);
     if (this.collection && this.collection.navtype === "page") {
       this.reset();
@@ -3241,7 +3242,7 @@ var Collection = class {
       this.loadItem(item);
     });
     if (this.view) {
-      this.view.render();
+      this.view._render();
     } else {
       dbg("collection does not have a view ", this);
     }
@@ -3273,7 +3274,7 @@ var Collection = class {
   clear() {
     this.items = [];
     if (this.view) {
-      this.view.render();
+      this.view._render();
     }
     this._trigger("update", this);
     return this;
@@ -3283,7 +3284,7 @@ var Collection = class {
    */
   render() {
     if (this.view) {
-      this.view.render();
+      this.view._render();
     }
     this._trigger("afterrender", this);
     return this;

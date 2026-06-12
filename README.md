@@ -222,7 +222,7 @@ With jQuery, `$.fn.kviews.baseUrl`, `basePath`, and `defaultHeaders` mirror the 
 
 ### Collection
 
-- `loadFromRemote()` - Load data from API
+- `loadFromRemote()` - Load data from API (optional loading overlay via `showLoader`, default `true`)
 - `append(itemData)` - Add new item
 - `render()` - Render collection
 - `on(event, callback)` - Event listeners
@@ -230,7 +230,7 @@ With jQuery, `$.fn.kviews.baseUrl`, `basePath`, and `defaultHeaders` mirror the 
 
 ### Item
 
-- `loadFromRemote()` - Load item from API
+- `loadFromRemote()` - Load item from API (re-renders only when data changed; optional overlay via `showLoader`)
 - `update(data)` - Update item
 - `delete()` - Delete item
 - `render()` - Render item
