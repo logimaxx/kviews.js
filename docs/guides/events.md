@@ -10,7 +10,7 @@ KViews provides an event system for both Collections and Items, allowing you to 
 
 ### Before Load Event
 
-Fired before loading data from the server.
+Fired before loading data from the server. By default, KViews shows a built-in loading overlay over the collection view; set `showLoader: false` on the collection to disable it and use custom loading UI here instead.
 
 ```javascript
 collection.on('beforeload', (collection) => {
@@ -59,7 +59,7 @@ collection.on('update', (collection) => {
 
 ### Before Load Event
 
-Fired before loading item data from the server.
+Fired before loading item data from the server. By default, KViews also shows a built-in loading overlay during the request; set `showLoader: false` on the item if you handle loading UI here instead.
 
 ```javascript
 item.on('beforeload', (item) => {
@@ -70,7 +70,7 @@ item.on('beforeload', (item) => {
 
 ### Load Event
 
-Fired when item data is loaded (from server or via `loadFromData()`).
+Fired when item data is loaded (from server or via `loadFromData()`). For `loadFromRemote()` on an already loaded item, this event fires even when the response matches the current data (no re-render in that case).
 
 ```javascript
 item.on('load', (item) => {

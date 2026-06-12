@@ -31,6 +31,36 @@ function parseOptions(options) {
   }
   throw new Error("Invalid options", options);
 }
+function deepEqual(a, b) {
+  if (a === b) {
+    return true;
+  }
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") {
+    return false;
+  }
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  for (const key of keysA) {
+    if (!Object.prototype.hasOwnProperty.call(b, key) || !deepEqual(a[key], b[key])) {
+      return false;
+    }
+  }
+  return true;
+}
 function deepmerge(target, source, optionsArgument) {
   function defaultArrayMerge(target2, source2, optionsArgument2) {
     let destination = target2.slice();
@@ -1824,17 +1854,26 @@ var Item = class _Item {
    */
   loadFromDataSource() {
     let loaders = [];
-    const overlay = createOverlay(this);
-    this.views.forEach((itemView) => {
-      if (itemView.el) {
-        let $el = $(itemView.el);
-        let loader = overlay.clone();
-        loader.insertBefore(itemView.el).width($el.width()).height($el.height());
-        loaders.push(loader);
-      }
-    });
+    const showLoader = this.showLoader !== false;
+    if (showLoader) {
+      const overlay = createOverlay(this);
+      this.views.forEach((itemView) => {
+        if (itemView.el) {
+          let $el = $(itemView.el);
+          let loader = overlay.clone();
+          loader.insertBefore(itemView.el).width($el.width()).height($el.height());
+          loaders.push(loader);
+        }
+      });
+    }
+    const removeLoaders = () => {
+      loaders.forEach((loader) => {
+        loader.remove();
+      });
+    };
     return new Promise((resolve, reject) => {
       if (!this.url) {
+        removeLoaders();
         reject(new Error("No valid URL provided"));
         return;
       }
@@ -1842,13 +1881,16 @@ var Item = class _Item {
       let urlString = this.url.toString ? this.url.toString() : this.url;
       this.storage.read(this, urlString, {}).then((resp) => {
         let data = resp.data;
-        this.loadFromRemoteDoc(data).render();
+        const parsedData = this._parseRemoteDoc(data);
+        if (!this._remoteDataEquals(parsedData)) {
+          this._applyParsedRemoteData(parsedData);
+          this.render();
+        }
         this._trigger("load", this);
-        loaders.forEach((loader) => {
-          loader.remove();
-        });
+        removeLoaders();
         resolve(this);
       }).catch((error2) => {
+        removeLoaders();
         dbg("fail to load item resource", this.url, error2);
         if (error2 instanceof Error && error2.jqXHR) {
           this.fail(error2.jqXHR, error2.textStatus || "error", error2.errorThrown || error2);
@@ -1925,13 +1967,12 @@ var Item = class _Item {
     return returnView ? view : this;
   }
   /**
-   * Load from a remote API document (format determined by adapter).
-   *
+   * Parse a remote API document into canonical item data.
    * @param {object} data - Raw HTTP response body
-   * @returns {Item} This instance for chaining
+   * @returns {object} Parsed resource data
+   * @private
    */
-  loadFromRemoteDoc(data) {
-    dbg("Load from remote doc", data);
+  _parseRemoteDoc(data) {
     if (this.collection && !this.collection.type) {
       const inferredType = this.adapter.inferItemType(data);
       if (inferredType) {
@@ -1939,11 +1980,97 @@ var Item = class _Item {
       }
     }
     this.adapter.validateItemRemoteDoc(data, { collection: this.collection });
-    const parsedData = this.adapter.parseItemResponse(data, { collection: this.collection });
+    return this.adapter.parseItemResponse(data, { collection: this.collection });
+  }
+  /**
+   * Apply parsed remote data to this item.
+   * @param {object} parsedData
+   * @private
+   */
+  _applyParsedRemoteData(parsedData) {
     Object.assign(this, parsedData);
     if (this.url) {
       this.url = createURL(this.url);
     }
+  }
+  /**
+   * Compare current item state with parsed remote data.
+   * @param {object} parsedData
+   * @returns {boolean}
+   * @private
+   */
+  _remoteDataEquals(parsedData) {
+    if (this.id == null && (!this.attributes || Object.keys(this.attributes).length === 0)) {
+      return false;
+    }
+    if (String(this.id ?? "") !== String(parsedData.id ?? "")) {
+      return false;
+    }
+    if ((this.type ?? null) !== (parsedData.type ?? null)) {
+      return false;
+    }
+    if (!deepEqual(this.attributes ?? {}, parsedData.attributes ?? {})) {
+      return false;
+    }
+    return deepEqual(
+      this._normalizeRelationshipsForCompare(this.relationships),
+      this._normalizeRelationshipsForCompare(parsedData.relationships)
+    );
+  }
+  /**
+   * Normalize relationships to plain comparable objects.
+   * @param {object} relationships
+   * @returns {object}
+   * @private
+   */
+  _normalizeRelationshipsForCompare(relationships) {
+    if (!relationships || typeof relationships !== "object") {
+      return {};
+    }
+    const normalized = {};
+    Object.keys(relationships).sort().forEach((name) => {
+      normalized[name] = this._normalizeRelationshipValueForCompare(relationships[name]);
+    });
+    return normalized;
+  }
+  /**
+   * @param {*} rel
+   * @returns {*}
+   * @private
+   */
+  _normalizeRelationshipValueForCompare(rel) {
+    if (rel == null) {
+      return null;
+    }
+    if (Array.isArray(rel)) {
+      return rel.map((item) => this._normalizeRelationshipValueForCompare(item));
+    }
+    if (typeof rel !== "object") {
+      return rel;
+    }
+    const normalized = {
+      id: rel.id ?? null,
+      type: rel.type ?? null,
+      attributes: rel.attributes ?? {}
+    };
+    if (rel.relationships) {
+      normalized.relationships = this._normalizeRelationshipsForCompare(rel.relationships);
+    }
+    return normalized;
+  }
+  /**
+   * Load from a remote API document (format determined by adapter).
+   *
+   * @param {object} data - Raw HTTP response body
+   * @returns {Item} This instance for chaining
+   */
+  loadFromRemoteDoc(data) {
+    dbg("Load from remote doc", data);
+    const parsedData = this._parseRemoteDoc(data);
+    if (this._remoteDataEquals(parsedData)) {
+      return this;
+    }
+    this._applyParsedRemoteData(parsedData);
     return this;
   }
   /**
@@ -3177,15 +3304,21 @@ var Collection = class {
    * @private
    */
   loadFromDataSource() {
-    const overlay = createOverlay(this);
     let loader = null;
-    if (this.view && this.view.el) {
+    const showLoader = this.showLoader !== false;
+    if (showLoader && this.view && this.view.el) {
+      const overlay = createOverlay(this);
       loader = $(overlay).clone().insertBefore(this.view.el).width($(this.view.el).width()).height($(this.view.el).height());
     }
+    const removeLoader = () => {
+      if (loader) {
+        $(loader).remove();
+      }
+    };
     this._trigger("beforeload", this);
     return new Promise((resolve, reject) => {
       if (!this.url) {
-        loader.remove();
+        removeLoader();
         reject(new Error("No valid URL provided"));
         return;
       }
@@ -3201,9 +3334,7 @@ var Collection = class {
         }
         this.receiveRemoteData(res.data);
         this._trigger("load", this);
-        if (loader) {
-          $(loader).remove();
-        }
+        removeLoader();
         if (this.paging) {
           this.paging.render();
         }
@@ -3211,15 +3342,15 @@ var Collection = class {
       }).catch((error2) => {
         if (error2 instanceof Error && error2.jqXHR) {
           this.fail(error2.jqXHR, error2.textStatus || "error", error2.errorThrown || error2);
-          loader.remove();
+          removeLoader();
           reject(error2);
         } else if (error2 && error2.jqXHR) {
           this.fail(error2.jqXHR, error2.textStatus, error2.errorThrown);
-          loader.remove();
+          removeLoader();
           reject(error2);
         } else {
           this.fail(null, "error", error2);
-          loader.remove();
+          removeLoader();
           reject(error2);
         }
       });
@@ -4021,6 +4152,7 @@ export {
   createOverlay,
   createURL,
   dbg,
+  deepEqual,
   deepmerge,
   index_default as default,
   error,

@@ -485,20 +485,27 @@ export class Collection {
      * @private
      */
     loadFromDataSource() {
-        const overlay = createOverlay(this);
         let loader = null;
+        const showLoader = this.showLoader !== false;
 
-        if (this.view && this.view.el) {
+        if (showLoader && this.view && this.view.el) {
+            const overlay = createOverlay(this);
             loader = $(overlay).clone().insertBefore(this.view.el)
                 .width($(this.view.el).width())
                 .height($(this.view.el).height());
         }
 
+        const removeLoader = () => {
+            if (loader) {
+                $(loader).remove();
+            }
+        };
+
         this._trigger('beforeload', this);
 
         return new Promise((resolve, reject) => {
             if (!this.url) {
-                loader.remove();
+                removeLoader();
                 reject(new Error("No valid URL provided"));
                 return;
             }
@@ -522,9 +529,7 @@ export class Collection {
                     // receiveRemoteData() will load items into collection
                     this.receiveRemoteData(res.data);
                     this._trigger('load', this);
-                    if (loader) {
-                        $(loader).remove();
-                    }
+                    removeLoader();
                     if(this.paging) {
                         this.paging.render();
                     }
@@ -536,17 +541,17 @@ export class Collection {
                     if (error instanceof Error && error.jqXHR) {
                         // New error format (KViewsHttpError)
                         this.fail(error.jqXHR, error.textStatus || 'error', error.errorThrown || error);
-                        loader.remove();
+                        removeLoader();
                         reject(error);
                     } else if (error && error.jqXHR) {
                         // Old error format (backward compatibility - plain object)
                         this.fail(error.jqXHR, error.textStatus, error.errorThrown);
-                        loader.remove();
+                        removeLoader();
                         reject(error);
                     } else {
                         // Plain Error instance or other error
                         this.fail(null, 'error', error);
-                        loader.remove();
+                        removeLoader();
                         reject(error);
                     }
                 });

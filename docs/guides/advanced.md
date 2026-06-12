@@ -250,6 +250,22 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 });
 ```
 
+### Silent background refresh
+
+For items that poll the server or reload on a timer, disable the built-in overlay and rely on conditional re-rendering (views update only when data actually changed):
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', {
+    url: '/api/posts/1',
+    type: 'posts',
+    showLoader: false,
+});
+
+setInterval(() => {
+    item.loadFromRemote(); // no overlay; no DOM update if payload unchanged
+}, 30000);
+```
+
 ### Virtual Scrolling
 
 For large collections, consider implementing virtual scrolling:

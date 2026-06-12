@@ -75,7 +75,7 @@ KViews.helpers.fetchFormData('#form');
 
 ```javascript
 // Loading
-collection.loadFromRemote() → Promise<Collection>
+collection.loadFromRemote() → Promise<Collection>   // optional overlay via showLoader (default true)
 collection.loadFromData(array) → Collection
 
 // CRUD
@@ -109,8 +109,8 @@ collection.filtering → Filtering|null
 
 ```javascript
 // Loading
-item.loadFromRemote() → Promise<Item>
-item.loadFromRemoteDoc(data) → Item   // parse HTTP body via adapter
+item.loadFromRemote() → Promise<Item>              // re-renders only if data changed; overlay unless showLoader: false
+item.loadFromRemoteDoc(data) → Item   // parse HTTP body via adapter; skips update if data unchanged
 item.loadFromData(data) → Item
 item.loadFromJSONAPIDoc(data) → Item  // deprecated alias of loadFromRemoteDoc
 
@@ -554,7 +554,8 @@ const collection = KViews.createCollectionInstance('#users-list', {
     itemListeners: Object,          // Listeners for all items
     itemOn: Object,                 // Alias for itemListeners
     on: Object,                     // Collection event listeners
-    dontload: Boolean               // Don't auto-load (default: false)
+    dontload: Boolean,              // Don't auto-load (default: false)
+    showLoader: Boolean             // Loading overlay during loadFromRemote() (default: true)
 }
 ```
 
@@ -568,9 +569,9 @@ const collection = KViews.createCollectionInstance('#users-list', {
     emptyview: String|Element,      // Empty state element
     strict: Boolean,                // Strict mode (default: false)
     on: Object,                     // Item event listeners
-    dontload: Boolean               // Don't auto-load (default: false)
+    dontload: Boolean,              // Don't auto-load (default: false)
+    showLoader: Boolean             // Loading overlay during loadFromRemote() (default: true)
 }
-```
 
 ### Event Names
 
@@ -581,8 +582,8 @@ const collection = KViews.createCollectionInstance('#users-list', {
 - `afterrender` - After rendering
 
 **Item Events:**
-- `beforeload` - Before loading from API
-- `load` - After loading from API
+- `beforeload` - Before loading from API (use for custom loading UI when `showLoader: false`)
+- `load` - After loading from API (fires even when item data unchanged)
 - `update` - When item updates
 - `remove` - When item is removed
 - `afterrender` - After rendering

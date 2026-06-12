@@ -45,6 +45,7 @@ const item = KViews.createItemInstance('#post-detail', {
     emptyview: '#empty',      // Empty state element
     strict: false,             // Strict mode
     dontload: false,          // Auto-load on creation
+    showLoader: true,         // Loading overlay during loadFromRemote() (default: true)
     on: {                      // Event listeners
         load: (item) => log('Loaded'),
         update: (item) => log('Updated')
@@ -99,6 +100,26 @@ item.loadFromRemote().then((item) => {
     log('Item loaded:', item.attributes.title);
 });
 ```
+
+### Reloading and background refresh
+
+Calling `loadFromRemote()` again on an already loaded item compares the response to the current data. Views are **re-rendered only when something changed** (`id`, `type`, `attributes`, or `relationships`). The `load` event still fires when the request completes.
+
+By default, a loading overlay is shown over bound views while the request is in flight. Disable it for polling or silent updates:
+
+```javascript
+const item = KViews.createItemInstance('#post-detail', {
+    url: '/api/posts/1',
+    type: 'posts',
+    showLoader: false,
+});
+
+// Or on an existing instance before reload
+item.showLoader = false;
+item.loadFromRemote();
+```
+
+Use `beforeload` / `load` if you want your own loading indicator instead of the built-in overlay.
 
 ### Loading from Static Data
 

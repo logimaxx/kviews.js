@@ -126,6 +126,7 @@ Creates a new Collection instance bound to a DOM element.
 - `actions` (Array) - Array of action objects for items
 - `on` (Object) - Event listeners object
 - `dontload` (Boolean) - Don't auto-load data
+- `showLoader` (Boolean) - Show loading overlay during `loadFromRemote()` (default: `true`)
 
 **Returns:** Collection instance or DOM element
 
@@ -160,6 +161,7 @@ Creates a new Item instance bound to a DOM element.
 - `actions` (Array) - Array of action objects
 - `on` (Object) - Event listeners object
 - `dontload` (Boolean) - Don't auto-load data
+- `showLoader` (Boolean) - Show loading overlay during `loadFromRemote()` (default: `true`)
 
 **Returns:** Item instance or DOM element
 

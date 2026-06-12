@@ -16,6 +16,8 @@ When using the constructor directly (instead of `KViews.createCollectionInstance
 - `headers` (Object) - Default headers for this collection’s `Storage` (merged with `KViews.defaultHeaders` on each request)
 - `ajaxOpts` (Object) - Constructor options for the internal `Storage` (merged with `headers`)
 - `storage` (Storage) - Use a custom `Storage` instead of the default
+- `dontload` (Boolean) - Don’t auto-load on creation (default: `false`)
+- `showLoader` (Boolean) - Show a loading overlay during `loadFromRemote()` (default: `true`). Set to `false` for silent background refreshes.
 
 Items created by the collection inherit the same `storage` instance, so global and collection-level headers apply to item loads and updates as well.
 
@@ -62,6 +64,9 @@ Paging instance (if pagination is configured). Set to `null` by default.
 
 #### `itemListeners` (Object|null)
 Event listeners to apply to all items created in this collection. Set to `null` by default.
+
+#### `showLoader` (Boolean)
+When `true` (default), `loadFromRemote()` displays a loading overlay over the collection view while the request is in flight. Set to `false` to fetch without the overlay.
 
 **Example:**
 ```javascript
@@ -183,6 +188,8 @@ Set collection URL.
 
 Load collection data from remote API.
 
+While the request is in flight, a loading overlay is shown over the collection view unless `showLoader: false` was set on the collection (or assigned on the instance before calling this method).
+
 **Returns:** Promise<Collection>
 
 **Example:**
@@ -190,6 +197,10 @@ Load collection data from remote API.
 collection.loadFromRemote().then((collection) => {
     log('Loaded', collection.items.length, 'items');
 });
+
+// Silent reload
+collection.showLoader = false;
+collection.loadFromRemote();
 ```
 
 #### `loadFromData(data)`

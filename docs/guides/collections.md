@@ -49,6 +49,7 @@ const collection = KViews.createCollectionInstance('#posts', {
     addontop: true,               // Add new items at top
     disableempty: false,          // Allow empty state
     dontload: false,              // Auto-load on creation
+    showLoader: true,             // Loading overlay during loadFromRemote() (default: true)
     on: {                         // Event listeners for collection
         load: (collection) => log('Loaded'),
         afterrender: (collection) => log('Rendered')
@@ -105,6 +106,10 @@ collection.loadFromRemote().then((collection) => {
     log('Loaded', collection.items.length, 'items');
 });
 ```
+
+### Loading overlay
+
+While `loadFromRemote()` is in progress, a loading overlay is displayed over the collection view by default. Set `showLoader: false` on the collection (or `collection.showLoader = false` before reload) to fetch without the overlay—useful for background polling or when you handle loading UI via `beforeload` / `load` events.
 
 ### Loading from Static Data
 

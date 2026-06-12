@@ -1,4 +1,4 @@
-import { dbg, log, parseOptions, createOverlay } from './utils.js';
+import { dbg, log, parseOptions, createOverlay, deepEqual } from './utils.js';
 import { createURL } from './URL.js';
 import { Storage } from './Storage.js';
 import { resolveAdapter } from './adapters/index.js';
@@ -236,21 +236,32 @@ export class Item {
      */
     loadFromDataSource() {
         let loaders = [];
-        const overlay = createOverlay(this);
+        const showLoader = this.showLoader !== false;
 
-        this.views.forEach((itemView) => {
-            if (itemView.el) {
-                let $el = $(itemView.el);
-                let loader = overlay.clone();
-                loader.insertBefore(itemView.el)
-                    .width($el.width())
-                    .height($el.height());
-                loaders.push(loader);
-            }
-        });
+        if (showLoader) {
+            const overlay = createOverlay(this);
+
+            this.views.forEach((itemView) => {
+                if (itemView.el) {
+                    let $el = $(itemView.el);
+                    let loader = overlay.clone();
+                    loader.insertBefore(itemView.el)
+                        .width($el.width())
+                        .height($el.height());
+                    loaders.push(loader);
+                }
+            });
+        }
+
+        const removeLoaders = () => {
+            loaders.forEach((loader) => {
+                loader.remove();
+            });
+        };
 
         return new Promise((resolve, reject) => {
             if (!this.url) {
+                removeLoaders();
                 reject(new Error("No valid URL provided"));
                 return;
             }
@@ -263,14 +274,17 @@ export class Item {
             this.storage.read(this, urlString, {})
                 .then((resp) => {
                     let data = resp.data;
-                    this.loadFromRemoteDoc(data).render();
+                    const parsedData = this._parseRemoteDoc(data);
+                    if (!this._remoteDataEquals(parsedData)) {
+                        this._applyParsedRemoteData(parsedData);
+                        this.render();
+                    }
                     this._trigger('load', this);
-                    loaders.forEach((loader) => {
-                        loader.remove();
-                    });
+                    removeLoaders();
                     resolve(this);
                 })
                 .catch((error) => {
+                    removeLoaders();
                     dbg("fail to load item resource", this.url, error);
                     // Handle both old error format and new Error instances
                     // KViewsHttpError has jqXHR, textStatus, errorThrown properties
@@ -363,14 +377,12 @@ export class Item {
     }
 
     /**
-     * Load from a remote API document (format determined by adapter).
-     *
+     * Parse a remote API document into canonical item data.
      * @param {object} data - Raw HTTP response body
-     * @returns {Item} This instance for chaining
+     * @returns {object} Parsed resource data
+     * @private
      */
-    loadFromRemoteDoc(data) {
-        dbg("Load from remote doc", data);
-
+    _parseRemoteDoc(data) {
         if (this.collection && !this.collection.type) {
             const inferredType = this.adapter.inferItemType(data);
             if (inferredType) {
@@ -379,12 +391,114 @@ export class Item {
         }
 
         this.adapter.validateItemRemoteDoc(data, { collection: this.collection });
+        return this.adapter.parseItemResponse(data, { collection: this.collection });
+    }
 
-        const parsedData = this.adapter.parseItemResponse(data, { collection: this.collection });
+    /**
+     * Apply parsed remote data to this item.
+     * @param {object} parsedData
+     * @private
+     */
+    _applyParsedRemoteData(parsedData) {
         Object.assign(this, parsedData);
         if (this.url) {
             this.url = createURL(this.url);
         }
+    }
+
+    /**
+     * Compare current item state with parsed remote data.
+     * @param {object} parsedData
+     * @returns {boolean}
+     * @private
+     */
+    _remoteDataEquals(parsedData) {
+        if (this.id == null && (!this.attributes || Object.keys(this.attributes).length === 0)) {
+            return false;
+        }
+
+        if (String(this.id ?? '') !== String(parsedData.id ?? '')) {
+            return false;
+        }
+
+        if ((this.type ?? null) !== (parsedData.type ?? null)) {
+            return false;
+        }
+
+        if (!deepEqual(this.attributes ?? {}, parsedData.attributes ?? {})) {
+            return false;
+        }
+
+        return deepEqual(
+            this._normalizeRelationshipsForCompare(this.relationships),
+            this._normalizeRelationshipsForCompare(parsedData.relationships)
+        );
+    }
+
+    /**
+     * Normalize relationships to plain comparable objects.
+     * @param {object} relationships
+     * @returns {object}
+     * @private
+     */
+    _normalizeRelationshipsForCompare(relationships) {
+        if (!relationships || typeof relationships !== 'object') {
+            return {};
+        }
+
+        const normalized = {};
+        Object.keys(relationships).sort().forEach((name) => {
+            normalized[name] = this._normalizeRelationshipValueForCompare(relationships[name]);
+        });
+        return normalized;
+    }
+
+    /**
+     * @param {*} rel
+     * @returns {*}
+     * @private
+     */
+    _normalizeRelationshipValueForCompare(rel) {
+        if (rel == null) {
+            return null;
+        }
+
+        if (Array.isArray(rel)) {
+            return rel.map((item) => this._normalizeRelationshipValueForCompare(item));
+        }
+
+        if (typeof rel !== 'object') {
+            return rel;
+        }
+
+        const normalized = {
+            id: rel.id ?? null,
+            type: rel.type ?? null,
+            attributes: rel.attributes ?? {},
+        };
+
+        if (rel.relationships) {
+            normalized.relationships = this._normalizeRelationshipsForCompare(rel.relationships);
+        }
+
+        return normalized;
+    }
+
+    /**
+     * Load from a remote API document (format determined by adapter).
+     *
+     * @param {object} data - Raw HTTP response body
+     * @returns {Item} This instance for chaining
+     */
+    loadFromRemoteDoc(data) {
+        dbg("Load from remote doc", data);
+
+        const parsedData = this._parseRemoteDoc(data);
+        if (this._remoteDataEquals(parsedData)) {
+            return this;
+        }
+
+        this._applyParsedRemoteData(parsedData);
         return this;
     }
 

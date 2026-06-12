@@ -20,6 +20,8 @@ new Item(options, data)
 - `headers` (Object) - Default headers for this item’s `Storage`
 - `ajaxOpts` (Object) - Options passed to `new Storage(...)` (merged with `headers`)
 - `storage` (Storage) - Custom `Storage` instance
+- `dontload` (Boolean) - Don’t auto-load on creation (default: `false`)
+- `showLoader` (Boolean) - Show a loading overlay during `loadFromRemote()` (default: `true`). Set to `false` for silent background refreshes.
 
 Headers are merged on each request with `KViews.defaultHeaders` (global first, then instance defaults, then per-call overrides).
 
@@ -58,6 +60,9 @@ Data adapter used to parse remote responses and serialize updates (inherited fro
 
 #### `strict` (Boolean)
 Strict mode flag.
+
+#### `showLoader` (Boolean)
+When `true` (default), `loadFromRemote()` displays a loading overlay over bound views while the request is in flight. Set to `false` to fetch without the overlay.
 
 ### Methods
 
@@ -174,6 +179,10 @@ item.setUrl('/api/posts/1', 'delete');
 
 Load item data from remote API.
 
+On an **already loaded** item, views are re-rendered only when the fetched data differs from the current state (`id`, `type`, `attributes`, and `relationships`). The `load` event still fires when the request completes, even if nothing changed.
+
+While the request is in flight, a loading overlay is shown over bound views unless `showLoader: false` was set on the item (or assigned on the instance before calling this method).
+
 **Returns:** Promise<Item>
 
 **Example:**
@@ -181,6 +190,10 @@ Load item data from remote API.
 item.loadFromRemote().then((item) => {
     log('Item loaded:', item);
 });
+
+// Silent background refresh (no overlay, no re-render if data unchanged)
+item.showLoader = false;
+item.loadFromRemote();
 ```
 
 #### `refresh()` / `reload()`
@@ -207,6 +220,8 @@ item.loadFromData({
 #### `loadFromRemoteDoc(data)`
 
 Load item from a remote API response body. The active **adapter** determines how the document is parsed (JSON:API, plain REST, or custom).
+
+If the parsed data is equal to the item’s current state, internal fields are not updated. When calling this method directly, invoke `.render()` yourself only when you need to refresh the DOM regardless of data changes.
 
 **Parameters:**
 - `data` (Object) - Parsed HTTP response body
