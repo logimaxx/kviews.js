@@ -200,6 +200,37 @@ export class PlainRestAdapter {
     }
 
     /**
+     * @param {import('../URL.js').URL} url
+     * @param {object} [context]
+     * @returns {{ offset?: number, pageSize?: number }}
+     */
+    extractListQueryFromUrl(url) {
+        const result = {};
+
+        if (!url || !url.parameters) {
+            return result;
+        }
+
+        if (url.parameters.hasOwnProperty(this.limitParam)) {
+            result.pageSize = url.parameters[this.limitParam];
+        } else if (url.parameters.hasOwnProperty('pageSize')) {
+            result.pageSize = url.parameters.pageSize;
+        }
+
+        if (this.paginationStyle === 'page' && url.parameters.hasOwnProperty(this.pageParam)) {
+            const page = url.parameters[this.pageParam] * 1;
+            const pageSize = result.pageSize != null ? result.pageSize * 1 : null;
+            if (pageSize) {
+                result.offset = (page - 1) * pageSize;
+            }
+        } else if (url.parameters.hasOwnProperty(this.offsetParam)) {
+            result.offset = url.parameters[this.offsetParam];
+        }
+
+        return result;
+    }
+
+    /**
      * @param {object|Array} itemData
      * @param {object} [context]
      * @returns {{ body: string, contentType: string }}

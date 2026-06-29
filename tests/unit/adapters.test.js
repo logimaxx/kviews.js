@@ -76,6 +76,20 @@ describe('JsonApiAdapter', () => {
     it('rejects collection document when loading as item', () => {
         expect(() => adapter.validateItemRemoteDoc({ data: [] })).toThrow(/collection/);
     });
+
+    it('extracts pageSize and offset from JSON:API list query params in URL', () => {
+        const url = {
+            parameters: {
+                'page[posts][limit]': '500',
+                'page[posts][offset]': '20',
+            },
+        };
+
+        expect(adapter.extractListQueryFromUrl(url, { type: 'posts' })).toEqual({
+            pageSize: '500',
+            offset: '20',
+        });
+    });
 });
 
 describe('PlainRestAdapter', () => {
@@ -173,6 +187,26 @@ describe('PlainRestAdapter', () => {
         expect(url.parameters).toEqual({ page: 3, limit: 10 });
     });
 
+    it('extracts pageSize and offset from plain REST list query params in URL', () => {
+        const plain = new PlainRestAdapter();
+        const url = { parameters: { limit: '500', offset: '40' } };
+
+        expect(plain.extractListQueryFromUrl(url)).toEqual({
+            pageSize: '500',
+            offset: '40',
+        });
+    });
+
+    it('extracts offset from page number when using page-based pagination', () => {
+        const plain = new PlainRestAdapter({ paginationStyle: 'page' });
+        const url = { parameters: { page: '3', limit: '10' } };
+
+        expect(plain.extractListQueryFromUrl(url)).toEqual({
+            pageSize: '10',
+            offset: 20,
+        });
+    });
+
     it('supports custom itemsPath and itemPath', () => {
         const plain = new PlainRestAdapter({
             itemsPath: 'results.items',
@@ -247,5 +281,37 @@ describe('Collection/Item adapter wiring', () => {
         item.loadFromRemoteDoc({ id: 1, title: 'Plain item' });
         expect(item.id).toBe('1');
         expect(item.attributes.title).toBe('Plain item');
+    });
+
+    it('reads pageSize from JSON:API URL when not provided in options', () => {
+        const collection = new Collection({
+            type: 'config_document_types',
+            url: '/config_document_types?sort=type&page[config_document_types][limit]=500',
+            dontload: true,
+        });
+
+        expect(collection.pageSize).toBe('500');
+    });
+
+    it('prefers explicit pageSize option over URL param', () => {
+        const collection = new Collection({
+            type: 'config_document_types',
+            url: '/config_document_types?page[config_document_types][limit]=500',
+            pageSize: 100,
+            dontload: true,
+        });
+
+        expect(collection.pageSize).toBe(100);
+    });
+
+    it('reads pageSize from plain REST limit param in URL', () => {
+        const collection = new Collection({
+            type: 'posts',
+            adapter: 'plain',
+            url: '/api/posts?limit=250',
+            dontload: true,
+        });
+
+        expect(collection.pageSize).toBe('250');
     });
 });

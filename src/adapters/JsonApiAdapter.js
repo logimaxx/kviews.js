@@ -132,6 +132,35 @@ export class JsonApiAdapter {
     }
 
     /**
+     * Read pagination params already present in a collection URL.
+     *
+     * @param {import('../URL.js').URL} url - Collection URL
+     * @param {{ type?: string }} [context]
+     * @returns {{ offset?: number, pageSize?: number }}
+     */
+    extractListQueryFromUrl(url, context = {}) {
+        const { type } = context;
+        const result = {};
+
+        if (!url || !url.parameters || !type) {
+            return result;
+        }
+
+        const limitKey = `page[${type}][limit]`;
+        const offsetKey = `page[${type}][offset]`;
+
+        if (url.parameters.hasOwnProperty(limitKey)) {
+            result.pageSize = url.parameters[limitKey];
+        }
+
+        if (url.parameters.hasOwnProperty(offsetKey)) {
+            result.offset = url.parameters[offsetKey];
+        }
+
+        return result;
+    }
+
+    /**
      * Serialize plain item data for a create (POST) request.
      *
      * @param {object|Array} itemData - Single item or array of items

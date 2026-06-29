@@ -879,6 +879,29 @@ var JsonApiAdapter = class {
     }
   }
   /**
+   * Read pagination params already present in a collection URL.
+   *
+   * @param {import('../URL.js').URL} url - Collection URL
+   * @param {{ type?: string }} [context]
+   * @returns {{ offset?: number, pageSize?: number }}
+   */
+  extractListQueryFromUrl(url, context = {}) {
+    const { type } = context;
+    const result = {};
+    if (!url || !url.parameters || !type) {
+      return result;
+    }
+    const limitKey = `page[${type}][limit]`;
+    const offsetKey = `page[${type}][offset]`;
+    if (url.parameters.hasOwnProperty(limitKey)) {
+      result.pageSize = url.parameters[limitKey];
+    }
+    if (url.parameters.hasOwnProperty(offsetKey)) {
+      result.offset = url.parameters[offsetKey];
+    }
+    return result;
+  }
+  /**
    * Serialize plain item data for a create (POST) request.
    *
    * @param {object|Array} itemData - Single item or array of items
@@ -1191,6 +1214,32 @@ var PlainRestAdapter = class {
       url.parameters[this.offsetParam] = offset;
     }
     url.parameters[this.limitParam] = pageSize;
+  }
+  /**
+   * @param {import('../URL.js').URL} url
+   * @param {object} [context]
+   * @returns {{ offset?: number, pageSize?: number }}
+   */
+  extractListQueryFromUrl(url) {
+    const result = {};
+    if (!url || !url.parameters) {
+      return result;
+    }
+    if (url.parameters.hasOwnProperty(this.limitParam)) {
+      result.pageSize = url.parameters[this.limitParam];
+    } else if (url.parameters.hasOwnProperty("pageSize")) {
+      result.pageSize = url.parameters.pageSize;
+    }
+    if (this.paginationStyle === "page" && url.parameters.hasOwnProperty(this.pageParam)) {
+      const page = url.parameters[this.pageParam] * 1;
+      const pageSize = result.pageSize != null ? result.pageSize * 1 : null;
+      if (pageSize) {
+        result.offset = (page - 1) * pageSize;
+      }
+    } else if (url.parameters.hasOwnProperty(this.offsetParam)) {
+      result.offset = url.parameters[this.offsetParam];
+    }
+    return result;
   }
   /**
    * @param {object|Array} itemData
@@ -2943,6 +2992,10 @@ var Collection = class {
       configurable: true
     });
     let options = Object.assign({}, opts);
+    const explicitListQuery = {
+      pageSize: options.hasOwnProperty("pageSize"),
+      offset: options.hasOwnProperty("offset")
+    };
     Object.assign(this, options);
     if (options.hasOwnProperty("paging") && $(options.paging).length) {
       this.paging = new Paging($(options.paging)[0], this);
@@ -2969,6 +3022,9 @@ var Collection = class {
       throw new Error("Invalid navigations type. Should be page or scroll");
     }
     this.adapter = resolveAdapter(opts.adapter);
+    if (this.url) {
+      this._syncListQueryFromUrl(this.url, explicitListQuery);
+    }
     this.storage = opts.hasOwnProperty("storage") ? opts.storage : new Storage(
       (() => {
         const storageOpts = Object.assign({}, opts.ajaxOpts || {});
@@ -3149,9 +3205,30 @@ var Collection = class {
         this.deleteUrl = typeof this.deleteUrl == "string" ? createURL(this.deleteUrl) : this.deleteUrl ?? createURL(this.url);
         this.updateUrl = typeof this.updateUrl == "string" ? createURL(this.updateUrl) : this.updateUrl ?? createURL(this.url);
         this.insertUrl = typeof this.insertUrl == "string" ? createURL(this.insertUrl) : this.insertUrl ?? createURL(this.url);
+        if (this.adapter) {
+          this._syncListQueryFromUrl(this.url);
+        }
         break;
     }
     return this;
+  }
+  /**
+   * Apply pagination params from URL query string to collection state.
+   * @private
+   * @param {import('./URL.js').URL} url
+   * @param {{ pageSize?: boolean, offset?: boolean }} [explicit] - Options explicitly set at init
+   */
+  _syncListQueryFromUrl(url, explicit = {}) {
+    if (!url || !this.adapter || typeof this.adapter.extractListQueryFromUrl !== "function") {
+      return;
+    }
+    const fromUrl = this.adapter.extractListQueryFromUrl(url, { type: this.type });
+    if (fromUrl.pageSize != null && !explicit.pageSize) {
+      this.setPageSize(fromUrl.pageSize);
+    }
+    if (fromUrl.offset != null && !explicit.offset) {
+      this.offset = fromUrl.offset * 1;
+    }
   }
   /**
    * Receive remote data

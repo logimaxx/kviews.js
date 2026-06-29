@@ -54,6 +54,11 @@ export class Collection {
         });
 
         let options = Object.assign({}, opts);
+
+        const explicitListQuery = {
+            pageSize: options.hasOwnProperty("pageSize"),
+            offset: options.hasOwnProperty("offset"),
+        };
         
         Object.assign(this, options);
 
@@ -87,6 +92,10 @@ export class Collection {
         }
 
         this.adapter = resolveAdapter(opts.adapter);
+
+        if (this.url) {
+            this._syncListQueryFromUrl(this.url, explicitListQuery);
+        }
 
         this.storage = opts.hasOwnProperty("storage")
             ? opts.storage
@@ -297,9 +306,34 @@ export class Collection {
                 this.deleteUrl = typeof this.deleteUrl == "string" ? createURL(this.deleteUrl) : (this.deleteUrl ?? createURL(this.url));
                 this.updateUrl = typeof this.updateUrl == "string" ? createURL(this.updateUrl) : (this.updateUrl ?? createURL(this.url));
                 this.insertUrl = typeof this.insertUrl == "string" ? createURL(this.insertUrl) : (this.insertUrl ?? createURL(this.url));
+                if (this.adapter) {
+                    this._syncListQueryFromUrl(this.url);
+                }
                 break;
         }
         return this;
+    }
+
+    /**
+     * Apply pagination params from URL query string to collection state.
+     * @private
+     * @param {import('./URL.js').URL} url
+     * @param {{ pageSize?: boolean, offset?: boolean }} [explicit] - Options explicitly set at init
+     */
+    _syncListQueryFromUrl(url, explicit = {}) {
+        if (!url || !this.adapter || typeof this.adapter.extractListQueryFromUrl !== "function") {
+            return;
+        }
+
+        const fromUrl = this.adapter.extractListQueryFromUrl(url, { type: this.type });
+
+        if (fromUrl.pageSize != null && !explicit.pageSize) {
+            this.setPageSize(fromUrl.pageSize);
+        }
+
+        if (fromUrl.offset != null && !explicit.offset) {
+            this.offset = fromUrl.offset * 1;
+        }
     }
     
 
