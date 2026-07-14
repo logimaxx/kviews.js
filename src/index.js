@@ -122,5 +122,8 @@ if (typeof $ !== "undefined" && $.fn) {
         return this.kviews(opts);
     };
 
-    
+    // Resolve the KViews Item bound to a rendered view element (or a child inside it).
+    $.fn.item = function () {
+        return this.first().closest("[data-type=item]").data("instance");
+    };
 }

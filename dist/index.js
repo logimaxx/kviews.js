@@ -4213,6 +4213,9 @@ if (typeof $ !== "undefined" && $.fn) {
     opts = Object.assign(opts, options);
     return this.kviews(opts);
   };
+  $.fn.item = function() {
+    return this.first().closest("[data-type=item]").data("instance");
+  };
 }
 export {
   Collection,

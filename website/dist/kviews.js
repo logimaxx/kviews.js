@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
- * Version: 1.3.0
- * Built: 2026-06-29T17:04:29.505Z
+ * Version: 1.3.1
+ * Built: 2026-07-14T14:52:37.235Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -4271,6 +4271,9 @@ var KViews = (() => {
       }
       opts = Object.assign(opts, options);
       return this.kviews(opts);
+    };
+    $.fn.item = function() {
+      return this.first().closest("[data-type=item]").data("instance");
     };
   }
   return index_default;
