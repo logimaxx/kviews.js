@@ -1,4 +1,4 @@
-import { dbg, log, parseOptions, createOverlay, trace } from './utils.js';
+import { dbg, log, parseOptions, placeOverlay, removeOverlay, trace } from './utils.js';
 import { createURL } from './URL.js';
 import { Storage } from './Storage.js';
 import { resolveAdapter } from './adapters/index.js';
@@ -523,15 +523,12 @@ export class Collection {
         const showLoader = this.showLoader !== false;
 
         if (showLoader && this.view && this.view.el) {
-            const overlay = createOverlay(this);
-            loader = $(overlay).clone().insertBefore(this.view.el)
-                .width($(this.view.el).width())
-                .height($(this.view.el).height());
+            loader = placeOverlay(this.view.el, this);
         }
 
         const removeLoader = () => {
             if (loader) {
-                $(loader).remove();
+                removeOverlay(loader);
             }
         };
 

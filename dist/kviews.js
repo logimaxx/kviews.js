@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
- * Version: 1.3.1
- * Built: 2026-07-14T14:52:37.235Z
+ * Version: 1.4.0
+ * Built: 2026-09-09T12:44:42.075Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -48,7 +48,9 @@ var KViews = (() => {
     getDefaultAdapter: () => getDefaultAdapter,
     log: () => log,
     parseOptions: () => parseOptions,
+    placeOverlay: () => placeOverlay,
     registerAdapter: () => registerAdapter,
+    removeOverlay: () => removeOverlay,
     resolveAdapter: () => resolveAdapter,
     setDefaultAdapter: () => setDefaultAdapter,
     template: () => template,
@@ -197,11 +199,121 @@ var KViews = (() => {
     }
     throw new Error("Handlebars is required for template compilation");
   }
-  function createOverlay(instance) {
-    return $(document.createElement("div")).text("Se incarca 123").addClass("komponent-overlay").data("asd", instance).attr(
-      "style",
-      "background: linear-gradient(135deg,rgb(191, 225, 205),rgb(236, 234, 232) 70%, #fca); text-align: center; position:absolute; z-index:100000;"
-    );
+  var OVERLAY_STYLE_ID = "kviews-overlay-styles";
+  var OVERLAY_CSS = `
+.komponent-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  pointer-events: auto;
+}
+@media (prefers-color-scheme: dark) {
+  .komponent-overlay {
+    background: rgba(15, 20, 25, 0.55);
+  }
+}
+.komponent-overlay-spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-top-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  animation: kviews-overlay-spin 0.6s linear infinite;
+}
+@media (prefers-color-scheme: dark) {
+  .komponent-overlay-spinner {
+    border-color: rgba(255, 255, 255, 0.15);
+    border-top-color: rgba(255, 255, 255, 0.7);
+  }
+}
+@keyframes kviews-overlay-spin {
+  to { transform: rotate(360deg); }
+}
+`;
+  function ensureOverlayStyles() {
+    if (typeof document === "undefined") {
+      return;
+    }
+    if (document.getElementById(OVERLAY_STYLE_ID)) {
+      return;
+    }
+    const style = document.createElement("style");
+    style.id = OVERLAY_STYLE_ID;
+    style.textContent = OVERLAY_CSS;
+    document.head.appendChild(style);
+  }
+  function resolveOverlayHost(host) {
+    if (!host) {
+      return null;
+    }
+    if (host.nodeName) {
+      return host;
+    }
+    return $(host)[0] || null;
+  }
+  function createOverlay() {
+    ensureOverlayStyles();
+    const el = document.createElement("div");
+    el.className = "komponent-overlay";
+    el.setAttribute("aria-busy", "true");
+    const spinner = document.createElement("span");
+    spinner.className = "komponent-overlay-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    el.appendChild(spinner);
+    return $(el);
+  }
+  function placeOverlay(host, instance) {
+    const hostEl = resolveOverlayHost(host);
+    if (!hostEl) {
+      return $();
+    }
+    const $overlay = createOverlay(instance);
+    const overlayEl = $overlay[0];
+    overlayEl._kviewsOverlayHost = hostEl;
+    if (!hostEl._kviewsOverlayCount) {
+      hostEl._kviewsOverlayRestore = {
+        position: hostEl.style.position,
+        isolation: hostEl.style.isolation
+      };
+      const computed = window.getComputedStyle(hostEl);
+      if (!computed.position || computed.position === "static") {
+        hostEl.style.position = "relative";
+      }
+      if (computed.isolation !== "isolate") {
+        hostEl.style.isolation = "isolate";
+      }
+    }
+    hostEl._kviewsOverlayCount = (hostEl._kviewsOverlayCount || 0) + 1;
+    hostEl.appendChild(overlayEl);
+    return $overlay;
+  }
+  function removeOverlay($overlay) {
+    const overlayEl = $overlay && ($overlay[0] || ($overlay.nodeName ? $overlay : null));
+    if (!overlayEl) {
+      return;
+    }
+    const hostEl = overlayEl._kviewsOverlayHost;
+    if (overlayEl.parentNode) {
+      overlayEl.parentNode.removeChild(overlayEl);
+    }
+    if (!hostEl) {
+      return;
+    }
+    hostEl._kviewsOverlayCount = Math.max(0, (hostEl._kviewsOverlayCount || 1) - 1);
+    if (hostEl._kviewsOverlayCount > 0) {
+      return;
+    }
+    const restore = hostEl._kviewsOverlayRestore;
+    if (restore) {
+      hostEl.style.position = restore.position;
+      hostEl.style.isolation = restore.isolation;
+    }
+    delete hostEl._kviewsOverlayCount;
+    delete hostEl._kviewsOverlayRestore;
   }
 
   // src/apiBase.js
@@ -1964,19 +2076,15 @@ var KViews = (() => {
       let loaders = [];
       const showLoader = this.showLoader !== false;
       if (showLoader) {
-        const overlay = createOverlay(this);
         this.views.forEach((itemView) => {
           if (itemView.el) {
-            let $el = $(itemView.el);
-            let loader = overlay.clone();
-            loader.insertBefore(itemView.el).width($el.width()).height($el.height());
-            loaders.push(loader);
+            loaders.push(placeOverlay(itemView.el, this));
           }
         });
       }
       const removeLoaders = () => {
         loaders.forEach((loader) => {
-          loader.remove();
+          removeOverlay(loader);
         });
       };
       return new Promise((resolve, reject) => {
@@ -3444,12 +3552,11 @@ var KViews = (() => {
       let loader = null;
       const showLoader = this.showLoader !== false;
       if (showLoader && this.view && this.view.el) {
-        const overlay = createOverlay(this);
-        loader = $(overlay).clone().insertBefore(this.view.el).width($(this.view.el).width()).height($(this.view.el).height());
+        loader = placeOverlay(this.view.el, this);
       }
       const removeLoader = () => {
         if (loader) {
-          $(loader).remove();
+          removeOverlay(loader);
         }
       };
       this._trigger("beforeload", this);

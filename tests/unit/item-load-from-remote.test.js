@@ -116,8 +116,41 @@ describe('Item.loadFromRemote()', () => {
         expect(renderSpy).not.toHaveBeenCalled();
     });
 
+    it('mounts the loader overlay inside the bound view', async () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+
+        const item = new Item({
+            url: '/api/posts/1',
+            type: 'posts',
+            dontload: true,
+        });
+        item.views = [{ el: host }];
+
+        let overlaySeen = false;
+        item.storage = {
+            read: vi.fn().mockImplementation(() => {
+                overlaySeen = host.querySelector(':scope > .komponent-overlay') !== null;
+                return Promise.resolve({
+                    data: {
+                        data: {
+                            id: '1',
+                            type: 'posts',
+                            attributes: { title: 'Hello' },
+                        },
+                    },
+                });
+            }),
+        };
+
+        await item.loadFromRemote();
+
+        expect(overlaySeen).toBe(true);
+        expect(host.querySelector('.komponent-overlay')).toBeNull();
+    });
+
     it('does not show loader overlay when showLoader is false', async () => {
-        const createOverlaySpy = vi.spyOn(utils, 'createOverlay');
+        const createOverlaySpy = vi.spyOn(utils, 'placeOverlay');
 
         const item = new Item({
             url: '/api/posts/1',

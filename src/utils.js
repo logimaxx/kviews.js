@@ -192,17 +192,133 @@ export function template(text) {
     throw new Error("Handlebars is required for template compilation");
 }
 
+const OVERLAY_STYLE_ID = "kviews-overlay-styles";
+const OVERLAY_CSS = `
+.komponent-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  pointer-events: auto;
+}
+@media (prefers-color-scheme: dark) {
+  .komponent-overlay {
+    background: rgba(15, 20, 25, 0.55);
+  }
+}
+.komponent-overlay-spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-top-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  animation: kviews-overlay-spin 0.6s linear infinite;
+}
+@media (prefers-color-scheme: dark) {
+  .komponent-overlay-spinner {
+    border-color: rgba(255, 255, 255, 0.15);
+    border-top-color: rgba(255, 255, 255, 0.7);
+  }
+}
+@keyframes kviews-overlay-spin {
+  to { transform: rotate(360deg); }
+}
+`;
+
+function ensureOverlayStyles() {
+    if (typeof document === "undefined") {
+        return;
+    }
+    if (document.getElementById(OVERLAY_STYLE_ID)) {
+        return;
+    }
+    const style = document.createElement("style");
+    style.id = OVERLAY_STYLE_ID;
+    style.textContent = OVERLAY_CSS;
+    document.head.appendChild(style);
+}
+
+function resolveOverlayHost(host) {
+    if (!host) {
+        return null;
+    }
+    if (host.nodeName) {
+        return host;
+    }
+    return $(host)[0] || null;
+}
+
 /**
  * Create overlay element for loading indicators
  */
-export function createOverlay(instance) {
-    // Use a real element so `$("<div>")` HTML parsing quirks (e.g. in jsdom) never yield an empty set.
-    return $(document.createElement("div"))
-        .text("Se incarca 123")
-        .addClass("komponent-overlay")
-        .data("asd", instance)
-        .attr(
-            "style",
-            "background: linear-gradient(135deg,rgb(191, 225, 205),rgb(236, 234, 232) 70%, #fca); text-align: center; position:absolute; z-index:100000;"
-        );
+export function createOverlay(/* instance */) {
+    ensureOverlayStyles();
+    const el = document.createElement("div");
+    el.className = "komponent-overlay";
+    el.setAttribute("aria-busy", "true");
+    const spinner = document.createElement("span");
+    spinner.className = "komponent-overlay-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    el.appendChild(spinner);
+    return $(el);
+}
+
+/**
+ * Mount a loading overlay inside the host so stacking stays local to that view.
+ */
+export function placeOverlay(host, instance) {
+    const hostEl = resolveOverlayHost(host);
+    if (!hostEl) {
+        return $();
+    }
+    const $overlay = createOverlay(instance);
+    const overlayEl = $overlay[0];
+    overlayEl._kviewsOverlayHost = hostEl;
+    if (!hostEl._kviewsOverlayCount) {
+        hostEl._kviewsOverlayRestore = {
+            position: hostEl.style.position,
+            isolation: hostEl.style.isolation,
+        };
+        const computed = window.getComputedStyle(hostEl);
+        if (!computed.position || computed.position === "static") {
+            hostEl.style.position = "relative";
+        }
+        if (computed.isolation !== "isolate") {
+            hostEl.style.isolation = "isolate";
+        }
+    }
+    hostEl._kviewsOverlayCount = (hostEl._kviewsOverlayCount || 0) + 1;
+    hostEl.appendChild(overlayEl);
+    return $overlay;
+}
+
+/**
+ * Remove a mounted overlay and restore host stacking styles when none remain.
+ */
+export function removeOverlay($overlay) {
+    const overlayEl = $overlay && ($overlay[0] || ($overlay.nodeName ? $overlay : null));
+    if (!overlayEl) {
+        return;
+    }
+    const hostEl = overlayEl._kviewsOverlayHost;
+    if (overlayEl.parentNode) {
+        overlayEl.parentNode.removeChild(overlayEl);
+    }
+    if (!hostEl) {
+        return;
+    }
+    hostEl._kviewsOverlayCount = Math.max(0, (hostEl._kviewsOverlayCount || 1) - 1);
+    if (hostEl._kviewsOverlayCount > 0) {
+        return;
+    }
+    const restore = hostEl._kviewsOverlayRestore;
+    if (restore) {
+        hostEl.style.position = restore.position;
+        hostEl.style.isolation = restore.isolation;
+    }
+    delete hostEl._kviewsOverlayCount;
+    delete hostEl._kviewsOverlayRestore;
 }

@@ -1,4 +1,4 @@
-import { dbg, log, parseOptions, createOverlay, deepEqual } from './utils.js';
+import { dbg, log, parseOptions, placeOverlay, removeOverlay, deepEqual } from './utils.js';
 import { createURL } from './URL.js';
 import { Storage } from './Storage.js';
 import { resolveAdapter } from './adapters/index.js';
@@ -239,23 +239,16 @@ export class Item {
         const showLoader = this.showLoader !== false;
 
         if (showLoader) {
-            const overlay = createOverlay(this);
-
             this.views.forEach((itemView) => {
                 if (itemView.el) {
-                    let $el = $(itemView.el);
-                    let loader = overlay.clone();
-                    loader.insertBefore(itemView.el)
-                        .width($el.width())
-                        .height($el.height());
-                    loaders.push(loader);
+                    loaders.push(placeOverlay(itemView.el, this));
                 }
             });
         }
 
         const removeLoaders = () => {
             loaders.forEach((loader) => {
-                loader.remove();
+                removeOverlay(loader);
             });
         };
 
