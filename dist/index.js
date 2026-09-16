@@ -1692,7 +1692,6 @@ var ItemView = class {
     let el;
     try {
       const renderContext = this.item.getRenderContext();
-      console.log("renderContext", renderContext);
       let html = this.template(renderContext);
       el = $(html).attr("data-type", "item").attr("id", this.id).data("view", this).data("instance", this.item);
     } catch (e) {
