@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Loading overlay** — dropped the debug gradient/Romanian placeholder text and `z-index: 100000`. The loader is now a language-neutral spinner, mounted inside the view with a local stacking context so it no longer paints over neighboring UI.
 - **`Item.perform_update()`** — failed PATCH requests now reject with the original storage/HTTP error instead of masking it with `ReferenceError: patchData is not defined`.
 
+## [1.4.3] - 2026-10-15
+
+### Changed
+
+- **`Collection.receiveRemoteData()`** — a single-item response whose id is already in the collection reloads that item and re-renders it. Upserts (`onduplicate=update`, including `field:add`) no longer append a second row.
+
 ## [1.2.1]
 
 ### Changed

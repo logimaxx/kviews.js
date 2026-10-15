@@ -98,6 +98,49 @@ describe('Collection.append() Fix', () => {
         expect(collection.items.length).toBe(1);
     });
 
+    it('refreshes an existing item when insert returns the same id', async () => {
+        const collection = new Collection({
+            type: 'posts',
+            url: '/api/posts'
+        });
+
+        const existing = new Item({
+            type: 'posts',
+            id: '1',
+            attributes: { title: 'Original', qty: 5 }
+        });
+        existing.shadow = { attributes: { title: 'Original', qty: 5 }, relationships: {} };
+        existing.render = vi.fn();
+        collection.items.push(existing);
+
+        collection.storage = {
+            create: vi.fn().mockResolvedValue({
+                data: {
+                    data: {
+                        id: 1,
+                        type: 'posts',
+                        attributes: { title: 'Original', qty: 7 }
+                    }
+                }
+            })
+        };
+        collection.insertUrl = { toString: () => '/api/posts' };
+        collection.view = {
+            reset: vi.fn(),
+            _render: vi.fn()
+        };
+        collection.loadItem = vi.fn();
+
+        const result = await collection.insert({ attributes: { qty: 2 } });
+
+        expect(result).toBe(existing);
+        expect(collection.items).toEqual([existing]);
+        expect(existing.attributes.qty).toBe(7);
+        expect(existing.shadow).toBeNull();
+        expect(existing.render).toHaveBeenCalled();
+        expect(collection.loadItem).not.toHaveBeenCalled();
+    });
+
     it('should still handle collection responses correctly', () => {
         const collection = new Collection({ 
             type: 'posts',

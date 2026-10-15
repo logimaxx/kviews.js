@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
- * Version: 1.4.1
- * Built: 2026-09-09T12:52:55.710Z
+ * Version: 1.4.2
+ * Built: 2026-10-15T19:25:53.198Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -3412,6 +3412,15 @@ var KViews = (() => {
       if (this.adapter.isSingleItemResponse(data)) {
         const hydratedItem = this.adapter.parseItemResponse(data);
         this.adapter.applyMetadata(this, this.adapter.extractMetadata(data));
+        const incomingId = hydratedItem && hydratedItem.id;
+        const existing = incomingId != null && incomingId !== "" ? this.items.find((item) => item && item.id != null && String(item.id) === String(incomingId)) : null;
+        if (existing) {
+          dbg("Refresh existing item in collection");
+          existing.loadFromData(hydratedItem, true);
+          existing.shadow = null;
+          this._trigger("afterrender", this);
+          return existing;
+        }
         if (this.items.length === 0) {
           this.view.reset(true);
         }

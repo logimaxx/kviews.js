@@ -1692,6 +1692,7 @@ var ItemView = class {
     let el;
     try {
       const renderContext = this.item.getRenderContext();
+      console.log("renderContext", renderContext);
       let html = this.template(renderContext);
       el = $(html).attr("data-type", "item").attr("id", this.id).data("view", this).data("instance", this.item);
     } catch (e) {
@@ -3350,6 +3351,15 @@ var Collection = class {
     if (this.adapter.isSingleItemResponse(data)) {
       const hydratedItem = this.adapter.parseItemResponse(data);
       this.adapter.applyMetadata(this, this.adapter.extractMetadata(data));
+      const incomingId = hydratedItem && hydratedItem.id;
+      const existing = incomingId != null && incomingId !== "" ? this.items.find((item) => item && item.id != null && String(item.id) === String(incomingId)) : null;
+      if (existing) {
+        dbg("Refresh existing item in collection");
+        existing.loadFromData(hydratedItem, true);
+        existing.shadow = null;
+        this._trigger("afterrender", this);
+        return existing;
+      }
       if (this.items.length === 0) {
         this.view.reset(true);
       }

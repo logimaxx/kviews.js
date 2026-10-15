@@ -354,6 +354,18 @@ export class Collection {
             const hydratedItem = this.adapter.parseItemResponse(data);
             this.adapter.applyMetadata(this, this.adapter.extractMetadata(data));
 
+            const incomingId = hydratedItem && hydratedItem.id;
+            const existing = incomingId != null && incomingId !== ""
+                ? this.items.find((item) => item && item.id != null && String(item.id) === String(incomingId))
+                : null;
+            if (existing) {
+                dbg("Refresh existing item in collection");
+                existing.loadFromData(hydratedItem, true);
+                existing.shadow = null;
+                this._trigger('afterrender', this);
+                return existing;
+            }
+
             if (this.items.length === 0) {
                 this.view.reset(true);
             }
