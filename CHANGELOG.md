@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Loading overlay** — dropped the debug gradient/Romanian placeholder text and `z-index: 100000`. The loader is now a language-neutral spinner, mounted inside the view with a local stacking context so it no longer paints over neighboring UI.
 - **`Item.perform_update()`** — failed PATCH requests now reject with the original storage/HTTP error instead of masking it with `ReferenceError: patchData is not defined`.
 
+## [1.4.4] - 2026-10-26
+
+### Fixed
+
+- **Loading overlay** — the background is now opaque (`--bs-body-bg`, fallback `#fff`), so unrendered templates no longer show through while a view loads. Overlay and spinner colors follow the page theme (`data-bs-theme`) instead of the OS `prefers-color-scheme`.
+
 ## [1.4.3] - 2026-10-15
 
 ### Changed

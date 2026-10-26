@@ -21,6 +21,14 @@ describe('loading overlay', () => {
         expect(document.getElementById('kviews-overlay-styles').textContent).toMatch(/z-index:\s*1/);
     });
 
+    it('has an opaque background so unrendered templates stay hidden', () => {
+        createOverlay({});
+        const css = document.getElementById('kviews-overlay-styles').textContent;
+
+        expect(css).toMatch(/background:\s*var\(--bs-body-bg,\s*#fff\)/);
+        expect(css).not.toMatch(/background:\s*rgba/);
+    });
+
     it('mounts inside the host and isolates stacking', () => {
         const $overlay = placeOverlay(host, {});
         const overlay = $overlay[0];

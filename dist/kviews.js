@@ -1,7 +1,7 @@
 /*!
  * KViews - Class-based API data binding library
- * Version: 1.4.2
- * Built: 2026-10-15T19:25:53.198Z
+ * Version: 1.4.3
+ * Built: 2026-10-26T18:57:36.878Z
  */
 var KViews = (() => {
   var __defProp = Object.defineProperty;
@@ -208,27 +208,17 @@ var KViews = (() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--bs-body-bg, #fff);
+  color: var(--bs-secondary-color, rgba(33, 37, 41, 0.75));
   pointer-events: auto;
-}
-@media (prefers-color-scheme: dark) {
-  .komponent-overlay {
-    background: rgba(15, 20, 25, 0.55);
-  }
 }
 .komponent-overlay-spinner {
   width: 1.25rem;
   height: 1.25rem;
-  border: 2px solid rgba(0, 0, 0, 0.12);
-  border-top-color: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(128, 128, 128, 0.25);
+  border-top-color: currentColor;
   border-radius: 50%;
   animation: kviews-overlay-spin 0.6s linear infinite;
-}
-@media (prefers-color-scheme: dark) {
-  .komponent-overlay-spinner {
-    border-color: rgba(255, 255, 255, 0.15);
-    border-top-color: rgba(255, 255, 255, 0.7);
-  }
 }
 @keyframes kviews-overlay-spin {
   to { transform: rotate(360deg); }
